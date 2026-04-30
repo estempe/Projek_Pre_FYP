@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+
+* {
+  font-family: 'Familjen Grotesk', sans-serif !important;
+}
+
+body {
+  background-color: #02101B; /* Background luar kita set Black sesuai palette */
+  font-family: 'Familjen Grotesk', sans-serif;
+}
