@@ -1,15 +1,24 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { Link } from "react-router-dom";
 
 export default function JoinSession() {
   const [sessionCode, setSessionCode] = useState("");
-
+  // const [soal,setSoal] = useState([]);
+  //  useEffect(() => {
+  //   fetch("http://127.0.0.1:8000/api/soal")
+  //     .then(res => res.json())
+  //     .then(data => setSoal(data));
+  // }, []);
+  
   return (
     // Kita udah nggak perlu nulis font-['...'] lagi di sini, cukup font-sans
     <div className="min-h-screen bg-[#E3F2FF] flex justify-center font-sans">
       <div className="w-full max-w-md bg-[#E3F2FF] min-h-screen flex flex-col relative overflow-hidden">
         <div className="flex-1 flex flex-col justify-center px-8 mt-[12vh]">
           <h1 className="text-[32px] font-bold text-[#02101B] text-center leading-tight mb-8">
+            {/* {soal.map((item)=>(
+              <h1>{item.Pertanyaan_Soal}</h1>
+            ))} */}
             Masukkan Kode
             <br />
             Sesi Permainan
