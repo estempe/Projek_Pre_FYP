@@ -1,14 +1,47 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // 1. Tambahkan useNavigate di sini
 
 export default function LoginSuperadmin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate(); // 2. Aktifkan fitur pindah halaman
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    console.log("Mencoba login SuperAdmin dengan:", username, password);
-    // Nanti tinggal tambahin logika auth dan navigate ke Home SuperAdmin di sini
+    
+    try {
+      // 3. Kita "tembak" (kirim data) ke pintu API Laravel yang sudah kita buat
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      // 4. Cek apakah Laravel bilang 'success'
+      if (response.ok && data.success) {
+        alert("Login Berhasil! Halo " + data.data.name);
+        
+        // Simpan token (kunci masuk) di ingatan browser
+        localStorage.setItem('auth_token', data.token);
+        
+        // Pindah ke halaman Home
+        navigate('/superadmin/home');
+      } else {
+        // Kalau salah password/username
+        alert(data.message || "Login gagal, coba cek lagi ya!");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Wah, gagal terhubung ke server Backend nih!");
+    }
   };
 
   return (
