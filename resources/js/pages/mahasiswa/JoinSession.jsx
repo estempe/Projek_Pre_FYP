@@ -1,15 +1,38 @@
 import React, { useState,useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link,useNavigate } from "react-router-dom";
 
 export default function JoinSession() {
+  
   const [sessionCode, setSessionCode] = useState("");
+  const navigate = useNavigate();
   // const [soal,setSoal] = useState([]);
   //  useEffect(() => {
   //   fetch("http://127.0.0.1:8000/api/soal")
   //     .then(res => res.json())
   //     .then(data => setSoal(data));
   // }, []);
-  
+  const handleJoin = async () => {
+    const res = await fetch("http://127.0.0.1:8000/api/check-session", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        session_code: sessionCode,
+      }),
+  });
+
+  const data = await res.json();
+
+  if (data.status === "found") {
+    // pindah halaman
+    navigate("/waiting", {
+    state: { sessionCode }
+  });
+  } else {
+    alert("Session tidak ditemukan");
+  }
+};
   return (
     // Kita udah nggak perlu nulis font-['...'] lagi di sini, cukup font-sans
     <div className="min-h-screen bg-[#E3F2FF] flex justify-center font-sans">
@@ -29,6 +52,7 @@ export default function JoinSession() {
             placeholder="Ketik kodenya disini!"
             value={sessionCode}
             onChange={(e) => setSessionCode(e.target.value)}
+            
             // Tambahkan placeholder:font-sans biar dia nurut sama global font
             className="w-full font-sans bg-white rounded-[18px] py-4 px-6 text-center text-lg text-[#02101B] font-medium border-2 border-[#cbdbe7] placeholder-[#02101b47] placeholder:font-sans placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-[#2E9AD7] focus:border-transparent transition-all"
           />
@@ -50,7 +74,9 @@ export default function JoinSession() {
           </Link>
         </div>
 
-          <button className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[6px] transition-all">
+          <button 
+          onClick={handleJoin}  
+          className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[6px] transition-all">
             Masuk
           </button>
         </div>

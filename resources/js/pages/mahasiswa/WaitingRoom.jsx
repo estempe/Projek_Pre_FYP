@@ -1,19 +1,44 @@
-import React from "react";
-
+import React,{useState,useEffect} from "react";
+import { useLocation,useNavigate } from "react-router-dom";
 export default function WaitingRoom() {
   // MOCK DATA / DATA DUMMY, NANTI GANTI PAKAI API AJA
-  const joinedTeams = [
-    { id: 1, name: "TeamPalingOke", major: "Business Management" },
-    { id: 2, name: "JagonyaBinus", major: "Creative Communication" },
-    { id: 3, name: "AdadehPokoknya", major: "Business Management" },
-    { id: 4, name: "Tes1234", major: "Business Information Technology" },
-    { id: 5, name: "SehatSehatMase", major: "Business Information Technology" },
-    { id: 6, name: "SokSuciGitu", major: "Creative Communication" },
-    { id: 7, name: "KanKitaMahPinter", major: "Business Hotel Management" },
-    { id: 8, name: "KanKitaMahPinter2", major: "Business Hotel Management" },
-    { id: 9, name: "LahKokGitu!", major: "Computer Science" },
-  ];
+  const location = useLocation();
+  const sessionCode = location.state?.sessionCode;
+ const navigate = useNavigate();
+  const [teams,setTeams] = useState([]);
+   useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/getTeams")
+      .then(res => res.json())
+      .then(data => setTeams(data));
+  }, []);
+  const checkStatus = async () => {
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/session-status/${sessionCode}`
+      );
+      const data = await res.json();
 
+      console.log("Status:", data.status);
+
+      if (data.status === "started") {
+        console.log("game dimulai");
+        navigate("/gameplay");
+      }
+    } catch (error) {
+      console.error("Error cek status:", error);
+    }
+  };
+
+
+    useEffect(() => {
+      if (!sessionCode) return;
+
+      const interval = setInterval(() => {
+        checkStatus();
+      }, 2000); // cek tiap 2 detik
+
+      return () => clearInterval(interval);
+    }, [sessionCode]);
   return (
     <div className="min-h-screen bg-[#02101B] flex justify-center font-sans">
       {/* Mobile Container */}
@@ -35,7 +60,7 @@ export default function WaitingRoom() {
 
           {/* Pill Counter */}
           <div className="bg-[#1D2A34] text-white px-5 py-2.5 rounded-xl text-[15px] font-medium mb-8">
-            {joinedTeams.length} Team telah masuk
+            {teams.length} Team telah masuk
           </div>
         </div>
 
@@ -52,7 +77,7 @@ export default function WaitingRoom() {
               <div className="grid grid-cols-2 gap-3 pb-4">
                 
                 {/* Looping data dari Array */}
-                {joinedTeams.map((team) => (
+                {teams.map((team) => (
                   <div 
                     key={team.id} 
                     className="bg-[#2A3948] rounded-[16px] p-3.5 flex flex-col justify-center items-center text-center shadow-sm"
