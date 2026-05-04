@@ -1,5 +1,5 @@
 import React ,{useState,useEffect}from "react";
-import { Link,useLocation} from "react-router-dom";
+import { Link,useLocation,useNavigate} from "react-router-dom";
 // Ganti path import ini menyesuaikan nama file yang kamu simpan di folder assets
 import CoinIcon from "../../assets/coin3D.png";
 import CheckGreenIcon from "../../assets/Visited-Pos.png";
@@ -13,10 +13,50 @@ import TrophyIcon from "../../assets/Trophy-Icon.svg";
 export default function MainGameplay() {
   // MOCK DATA: Status timeline (Nanti diatur sama backend/state)
   const location = useLocation();
+  const navigate = useNavigate();
   const namaTeam = location.state?.nameTeam;
   const sessionCode = location.state?.sessionCode;
   const [posts,setPosts] = useState([]);
+  const [coins, setCoins] = useState(0);
   console.log(namaTeam,sessionCode);
+  function goToLeaderboard() {
+    navigate("/leaderboard", {
+      state: {
+        sessionCode: sessionCode,
+        nameTeam: namaTeam,
+      },
+    });
+}
+  async function handleShowCoin() {
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/getTeamCoins", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        session_code: sessionCode,
+        team_name: namaTeam,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.status === "success") {
+      setCoins(data.total_coins);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+function goToRecovery() {
+  navigate("/recovery", {
+    state: {
+      sessionCode: sessionCode,
+      nameTeam: namaTeam,
+    },
+  });
+}
   async function fetchTeamPosts() {
   try {
     const response = await fetch("http://127.0.0.1:8000/api/team-posts", {
@@ -50,8 +90,19 @@ export default function MainGameplay() {
   }
 }
     useEffect(() => {
-      fetchTeamPosts();
-  }, []);
+      if (!sessionCode || !namaTeam) return;
+
+      const fetchAll = () => {
+        fetchTeamPosts();
+        handleShowCoin();
+      };
+
+      fetchAll(); // pertama kali
+
+      const interval = setInterval(fetchAll, 2000);
+
+      return () => clearInterval(interval);
+    }, [sessionCode, namaTeam]);
   // const pos_item = [
   //   {
   //     id: 1,
@@ -118,7 +169,7 @@ export default function MainGameplay() {
           <div className="flex items-center gap-3">
             <img src={CoinIcon} alt="BeeCoin" className="w-10 h-10" />
             <h1 className="text-[44px] font-bold text-[#02101B] leading-none tracking-tight mt-1">
-              220
+              {coins}
             </h1>
           </div>
           {/* Font mono untuk tulisan BeeCoin agar mirip typewriter di desain */}
@@ -144,7 +195,9 @@ export default function MainGameplay() {
             </div>
           </div>
 
-          <button className="w-full bg-[#1D2A34] text-white py-3.5 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform">
+          <button 
+          onClick={goToRecovery}
+          className="w-full bg-[#1D2A34] text-white py-3.5 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12.65 10A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H14v4h4v-4h3v-4h-8.35zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
             </svg>
@@ -251,14 +304,14 @@ export default function MainGameplay() {
         {/* --- 4. FLOATING BOTTOM NAVIGATION --- */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50">
           {/* Home Icon (Active) - Tetap tombol biasa karena kita sedang di Home */}
-          <button className="hover:scale-110 transition-transform">
+          <button className="hover:scale-110 transition-transform" disabled>
             <img src={HomeIcon} alt="Home" className="w-7 h-7" />
           </button>
 
           {/* Trophy Icon (Inactive) - Ganti jadi Link menuju /leaderboard */}
-          <Link to="/leaderboard" className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
+          <button onClick={goToLeaderboard} className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
             <img src={TrophyIcon} alt="Reward" className="w-7 h-7" />
-          </Link>
+          </button>
         </div>
       </div>
     </div>

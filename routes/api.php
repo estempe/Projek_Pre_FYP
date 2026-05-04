@@ -1,7 +1,6 @@
 <?php
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use App\Models\Table_Soal;
 use App\Models\GameSession;
 use App\Models\Team;
 use Illuminate\Http\Request;
@@ -144,6 +143,73 @@ Route::post('/rejoin', function (Request $request) {
     return response()->json(['status' => 'team_not_found'], 404);
 });
 
+Route::post('/leaderboard', function (Request $request) {
+
+    // 1. cari session
+    $session = GameSession::where('session_code', $request->session_code)->first();
+
+    if (!$session) {
+        return response()->json([
+            'status' => 'session_not_found'
+        ], 404);
+    }
+
+    // 2. ambil semua team + total coins
+    $leaderboard = DB::table('teams')
+        ->leftJoin('team_posts', function ($join) {
+            $join->on('teams.id', '=', 'team_posts.team_id')
+                 ->where('team_posts.status', 'reward'); // 🔥 filter di JOIN
+        })
+        ->where('teams.game_session_id', $session->id)
+        ->select(
+            'teams.id',
+            'teams.name',
+            'teams.major',
+            DB::raw('COALESCE(SUM(team_posts.earned_coins), 0) as total_coins')
+        )
+        ->groupBy('teams.id', 'teams.name', 'teams.major')
+        ->orderByDesc('total_coins') // 🔥 ranking
+        ->get();
+
+    return response()->json([
+        'status' => 'success',
+        'data' => $leaderboard
+    ]);
+});
+Route::post('/getTeamCoins', function (Request $request) {
+
+    // 1. cari session
+    $session = GameSession::where('session_code', $request->session_code)->first();
+
+    if (!$session) {
+        return response()->json([
+            'status' => 'session_not_found'
+        ], 404);
+    }
+
+    // 2. cari team
+    $team = Team::where('game_session_id', $session->id)
+                ->where('name', $request->team_name)
+                ->first();
+
+    if (!$team) {
+        return response()->json([
+            'status' => 'team_not_found'
+        ], 404);
+    }
+
+    // 3. ambil total coin dari team_posts
+    $totalCoins = DB::table('team_posts')
+        ->where('team_id', $team->id)
+        ->where('status', 'reward') // 🔥 penting
+        ->sum('earned_coins');
+
+    return response()->json([
+        'status' => 'success',
+        'team' => $team,
+        'total_coins' => $totalCoins
+    ]);
+});
 
 // Rute yang wajib pakai Token (Sudah Login)
 Route::middleware('auth:sanctum')->group(function () {

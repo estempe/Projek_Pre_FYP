@@ -1,26 +1,39 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link,useLocation,useNavigate} from "react-router-dom";
 
 import Lock from "../../assets/Lock.svg";
 
 // DATA MASIH DUMMY, NANTI GANTI PAKAI API AJA
 
 export default function RecoveryAccess() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const namaTeam = location.state?.nameTeam;
+  const sessionCode = location.state?.sessionCode;
+  function handleGoToGameplay() {
+
+  navigate("/gameplay", {
+    state: {
+      nameTeam: namaTeam,
+      sessionCode: sessionCode,
+    },
+  });
+}
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-10">
       <div className="w-full max-w-md min-h-screen flex flex-col relative px-8">
         
         {/* --- HEADER: Tombol Kembali --- */}
         <div className="pt-12 pb-8">
-          <Link 
-            to="/gameplay" 
+          <button
+            onClick={handleGoToGameplay}
             className="flex items-center text-[#02101B] font-bold text-[18px] hover:text-[#2E9AD7] transition-colors w-fit"
           >
             <svg className="w-6 h-6 mr-1" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"></path>
             </svg>
             Kembali
-          </Link>
+          </button>
         </div>
 
         {/* --- MAIN CONTENT --- */}
@@ -50,7 +63,7 @@ export default function RecoveryAccess() {
               </div>
               {/* Input Box */}
               <div className="w-full border border-[#B5C5D1] rounded-[16px] py-4 text-center text-[#02101B] font-bold text-[18px]">
-                Tes1234
+                {namaTeam}
               </div>
             </div>
 
@@ -65,7 +78,7 @@ export default function RecoveryAccess() {
               </div>
               {/* Input Box */}
               <div className="w-full border border-[#B5C5D1] rounded-[16px] py-4 text-center text-[#02101B] font-bold text-[20px] tracking-[0.2em]">
-                673452
+                {sessionCode}
               </div>
             </div>
 

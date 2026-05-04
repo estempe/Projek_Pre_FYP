@@ -9,7 +9,7 @@ class GameSession extends Model
 {
     protected  $table = 'game_sessions';
     
-}
+
     use HasFactory;
 
     protected $fillable = [

@@ -1,5 +1,5 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React,{useState,useEffect} from "react";
+import { Link ,useNavigate,useLocation} from "react-router-dom";
 // Pastikan path import ini sesuai dengan struktur folder assets-mu
 import CoinIcon from "../../assets/coin3D.png";
 import HomeIcon from "../../assets/Home-Icon.svg";
@@ -9,17 +9,63 @@ export default function Leaderboard() {
   // MOCK DATA: Nanti data ini di-fetch dari backend/database
   // isCurrentUser digunakan untuk menandai baris milik mahasiswa yang sedang buka app
   // isFinished digunakan untuk memunculkan badge ungu "Selesai"
-  const leaderboardData = [
-    { id: 1, rank: 1, name: "TeamPalingOke", major: "Business Management", score: 930, isFinished: true },
-    { id: 2, rank: 2, name: "JagonyaBinus", major: "Creative Communication", score: 852, isFinished: true },
-    { id: 3, rank: 3, name: "AdadehPokoknya", major: "Business Management", score: 310 },
-    { id: 4, rank: 4, name: "Tes1234", major: "Business Information Technology", score: 220, isCurrentUser: true },
-    { id: 5, rank: 5, name: "SehatSehatMaba", major: "Business Information Technology", score: 190 },
-    { id: 6, rank: 6, name: "SokSuciGitu", major: "Creative Communication", score: 184 },
-    { id: 7, rank: 7, name: "KanKitaMahPinter", major: "Business Hotel Management", score: 100 },
-    { id: 8, rank: 8, name: "LahKokGitu!", major: "Computer Science", score: 80 },
-  ];
+  
+  const [teams, setTeams] = useState([]);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const namaTeam = location.state?.nameTeam;
+  const sessionCode = location.state?.sessionCode;
+  function goToGameplay() {
+    navigate("/gameplay", {
+      state: {
+        nameTeam: namaTeam,
+        sessionCode: sessionCode,
+      },
+    });
+}
+  async function fetchLeaderboard() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/leaderboard", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_code: sessionCode,
+        }),
+      });
 
+      const data = await response.json();
+
+      if (data.status === "success") {
+        setTeams(data.data);
+      }
+
+    } catch (error) {
+      console.error(error);
+    }
+  }
+  useEffect(() => {
+  if (!sessionCode || !namaTeam) return;
+
+  const fetchAll = () => {
+    fetchLeaderboard();
+    
+    
+  };
+
+  fetchAll();
+
+  const interval = setInterval(fetchAll, 2000);
+
+  return () => clearInterval(interval);
+
+}, [sessionCode, namaTeam]);
+
+  
+  console.log(sessionCode,namaTeam);
+  
+  
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-32">
       <div className="w-full max-w-md min-h-screen flex flex-col relative">
@@ -33,12 +79,12 @@ export default function Leaderboard() {
 
         {/* --- LIST KLASEMEN --- */}
         <div className="px-6 flex flex-col gap-4">
-          {leaderboardData.map((team) => (
+          {teams.map((team,index) => (
             <div
               key={team.id}
               // Logika Dinamis: Jika isCurrentUser true, border hitam solid tebal. Kalau tidak, putus-putus.
               className={`flex items-center bg-white rounded-[20px] p-4 ${
-                team.isCurrentUser
+                team.name === namaTeam
                   ? "border-2 border-[#02101B] shadow-sm"
                   : "border border-dashed border-[#A0B0BC] shadow-sm"
               }`}
@@ -48,10 +94,10 @@ export default function Leaderboard() {
               <div className="w-10 shrink-0">
                 <span 
                   className={`text-[18px] font-bold ${
-                    team.isCurrentUser ? "text-[#02101B]" : "text-[#8C9BA5]"
+                    team.name === namaTeam ? "text-[#02101B]" : "text-[#8C9BA5]"
                   }`}
                 >
-                  #{team.rank}
+                  #{index+1}
                 </span>
               </div>
 
@@ -80,7 +126,7 @@ export default function Leaderboard() {
               <div className="flex items-center gap-1.5 shrink-0">
                 <img src={CoinIcon} alt="coin" className="w-4 h-4 object-contain" />
                 <span className="font-medium text-[#E5A015] text-[16px]">
-                  {team.score}
+                  {team.total_coins}
                 </span>
               </div>
               
@@ -91,12 +137,14 @@ export default function Leaderboard() {
         {/* --- FLOATING BOTTOM NAVIGATION --- */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50">
           {/* Home Icon (Inactive) - Ganti jadi Link menuju /gameplay */}
-          <Link to="/gameplay" className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
+          <button 
+          onClick={goToGameplay}
+          className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
             <img src={HomeIcon} alt="Home" className="w-7 h-7" />
-          </Link>
+          </button>
 
           {/* Trophy Icon (Active) - Tetap tombol biasa karena kita sedang di Leaderboard */}
-          <button className="hover:scale-110 opacity-100 transition-transform">
+          <button className="hover:scale-110 opacity-100 transition-transform" disabled>
             <img src={TrophyIcon} alt="Reward" className="w-7 h-7" />
           </button>
         </div>
