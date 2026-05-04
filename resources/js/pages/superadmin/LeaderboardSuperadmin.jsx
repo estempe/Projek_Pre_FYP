@@ -1,136 +1,90 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-
-// --- IMPORT ASSETS KAMU (Pastikan path ../../ benar) ---
-import CoinIcon from '../../assets/Coin3D.png';
-import HomeIcon from '../../assets/Home-Icon.svg';
-import TrophyIcon from '../../assets/Trophy-Icon.svg';
-
-// --- DUMMY DATA LEADERBOARD ---
-const leaderboardData = [
-  { id: "t1", rank: 1, name: "TeamPalingOke", major: "Business Management", score: 930, status: "Selesai" },
-  { id: "t2", rank: 2, name: "JagonyaBinus", major: "Creative Communication", score: 852, status: "Selesai" },
-  { id: "t3", rank: 3, name: "AdadehPokoknya", major: "Business Management", score: 310, status: null },
-  { id: "t4", rank: 4, name: "Tes1234", major: "Business Information Technology", score: 220, status: null },
-  { id: "t5", rank: 5, name: "SehatSehatMaba", major: "Business Information Technology", score: 190, status: null },
-  { id: "t6", rank: 6, name: "SokSuciGitu", major: "Creative Communication", score: 184, status: null },
-  { id: "t7", rank: 7, name: "KanKitaMahPinter", major: "Business Hotel Management", score: 100, status: null },
-  { id: "t8", rank: 8, name: "LahKokGitu!", major: "Computer Science", score: 80, status: null },
-];
+import React, { useState, useEffect } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import CoinIcon from "../../assets/Coin3D.png";
+import HomeIcon from "../../assets/Home-Icon.svg";
+import TrophyIcon from "../../assets/Trophy-Icon.svg";
 
 export default function LeaderboardSuperadmin() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fungsi untuk Trigger Fullscreen Browser
-  const toggleFullScreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch((err) => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
-    }
-  };
-
-  // Listener untuk mendeteksi perubahan Fullscreen (misal user pencet ESC)
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+    const fetchLeaderboard = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`/api/sessions/${id}/leaderboard`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+          setLeaderboardData(result.data);
+        }
+      } catch (error) {
+        console.error("Gagal mengambil leaderboard:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
+
+    // 1. Panggil data pertama kali saat halaman dibuka
+    fetchLeaderboard();
+
+    // 2. Buat interval untuk memanggil data ulang setiap 5 detik (5000 ms)
+    const intervalId = setInterval(() => {
+      fetchLeaderboard();
+    }, 5000);
+
+    // 3. Bersihkan interval saat Superadmin pindah ke halaman lain agar tidak bocor (memory leak)
+    return () => clearInterval(intervalId);
+  }, [id]);
 
   return (
-    <div className={`min-h-screen bg-[#EBF2F8] font-sans flex justify-center transition-all duration-300 ${isFullscreen ? 'py-12' : 'pb-32'}`}>
-      
-      {/* Wrapper dinamis: Mode HP (max-w-md) vs Mode Proyektor (max-w-4xl) */}
-      <div className={`w-full bg-[#EBF2F8] min-h-screen flex flex-col relative transition-all duration-500 ${isFullscreen ? 'max-w-4xl px-8' : 'max-w-md px-6 pt-16'}`}>
-        
-        {/* --- HEADER --- */}
-        <div className="flex justify-center items-center mb-10 relative">
-          <h1 className="text-[24px] font-bold text-[#1D2B39] tracking-wide">
-            LEADERBOARD
-          </h1>
-          
-          {/* Tombol Expand / Collapse Fullscreen */}
-          <button 
-            onClick={toggleFullScreen}
-            className="absolute right-0 text-[#1D2B39] hover:opacity-70 transition-opacity p-2"
-          >
-            {isFullscreen ? (
-              // Icon Collapse (Keluar Fullscreen)
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 5h5V4m6 5l5-5m-5 0h5v5m-5 6l5 5m0-5h-5v5m-6-5l-5 5m5 0H4v-5"></path></svg>
-            ) : (
-              // Icon Expand (Masuk Fullscreen)
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-            )}
+    <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-32">
+      <div className="w-full max-w-md min-h-screen flex flex-col relative">
+        <div className="pt-12 px-6 flex justify-between items-center">
+           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-[#1D2B39] font-bold text-[15px]">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+            Kembali
+          </button>
+          {/* Tombol Menuju Halaman Redeem Kasir */}
+          <button onClick={() => navigate(`/superadmin/session/redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-[#268bc4]">
+            Buka Kasir Redeem
           </button>
         </div>
 
-        {/* --- DAFTAR RANKING --- */}
-        <div className="flex flex-col gap-3">
+        <div className="pt-8 pb-8 flex justify-center">
+          <h1 className="text-[22px] font-bold text-[#1D2A34] tracking-wide">LEADERBOARD</h1>
+        </div>
+
+        <div className="px-6 flex flex-col gap-4">
+          {isLoading ? <p className="text-center text-gray-500">Memuat klasemen...</p> : leaderboardData.length === 0 ? <p className="text-center text-gray-500">Belum ada tim.</p> : null}
           {leaderboardData.map((team) => (
-            <div 
-              key={team.id}
-              // Card styling pakai border-dashed sesuai desain
-              className={`relative flex items-center justify-between p-4 rounded-2xl bg-white transition-all
-                ${team.rank === 4 && !isFullscreen ? 'border-2 border-solid border-[#1D2B39] shadow-md' : 'border border-dashed border-[#CBD5E1] shadow-sm'}
-              `}
-            >
-              <div className="flex items-center gap-4 w-full">
-                {/* Ranking Angka */}
-                <span className="text-[#92A0AD] font-bold text-[18px] w-6 text-center">
-                  #{team.rank}
-                </span>
-
-                {/* Info Tim */}
-                <div className="flex-1">
-                  {/* Badge Selesai (Ungu) */}
-                  {team.status === 'Selesai' && (
-                    <span className="inline-block bg-[#8B18D6] text-white text-[10px] font-bold px-3 py-0.5 rounded-full mb-1">
-                      Selesai
-                    </span>
-                  )}
-                  <h3 className="text-[16px] font-bold text-[#1D2B39] leading-tight mb-0.5">
-                    {team.name}
-                  </h3>
-                  <p className="text-[#92A0AD] text-[11px] font-medium leading-none">
-                    {team.major}
-                  </p>
-                </div>
-
-                {/* Score */}
-                <div className="flex items-center gap-1.5 bg-[#FFF9E5] px-3 py-1.5 rounded-full">
-                  <img src={CoinIcon} alt="Coin" className="w-[14px] h-[14px] object-contain drop-shadow-sm" />
-                  <span className="text-[#E5A015] font-bold text-[14px]">{team.score}</span>
-                </div>
+            <div key={team.id} className="flex items-center bg-white rounded-[20px] p-4 border border-[#CBD5E1] shadow-sm">
+              <div className="w-10 shrink-0">
+                <span className="text-[18px] font-bold text-[#02101B]">#{team.rank}</span>
+              </div>
+              <div className="flex-1 flex flex-col justify-center min-w-0 pr-2">
+                <p className="text-[#02101B] text-[16px] font-medium truncate w-full">{team.name}</p>
+                <p className="text-[#8C9BA5] text-[11px] font-light truncate w-full">{team.major}</p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <img src={CoinIcon} alt="coin" className="w-4 h-4 object-contain" />
+                <span className="font-medium text-[#E5A015] text-[16px]">{team.score}</span>
               </div>
             </div>
           ))}
         </div>
 
-        {/* --- BOTTOM NAVIGATION (SUPERADMIN) --- */}
-        {/* Sembunyikan navigasi bawah saat Fullscreen Mode (TV/Proyektor) */}
-        {!isFullscreen && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50">
-            
-            {/* Home Icon (Inactive) */}
-            <Link to="/superadmin/session/live" className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
-              <img src={HomeIcon} alt="Home" className="w-7 h-7" />
-            </Link>
-
-            {/* Trophy Icon (Active) - Mengarah ke Leaderboard */}
-            <button className="hover:scale-110 transition-transform">
-              <img src={TrophyIcon} alt="Reward" className="w-7 h-7" />
-            </button>
-            
-          </div>
-        )}
-
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50">
+          <Link to={`/superadmin/session/live/${id}`} className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
+            <img src={HomeIcon} alt="Home" className="w-7 h-7" />
+          </Link>
+          <button className="hover:scale-110 opacity-100 transition-transform">
+            <img src={TrophyIcon} alt="Reward" className="w-7 h-7" />
+          </button>
+        </div>
       </div>
     </div>
   );

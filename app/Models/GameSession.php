@@ -9,6 +9,8 @@ class GameSession extends Model
 {
     use HasFactory;
 
+    protected $table = 'game_sessions';
+
     protected $fillable = [
         'name',
         'session_code',
@@ -20,4 +22,9 @@ class GameSession extends Model
         'qr_image_path',
         'status',
     ];
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class, 'game_session_id');
+    }
 }

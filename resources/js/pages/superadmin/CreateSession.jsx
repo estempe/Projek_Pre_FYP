@@ -20,12 +20,12 @@ export default function CreateSession() {
   const [qrFile, setQrFile] = useState(null);
   const [fileName, setFileName] = useState('');
 
-  // State untuk POS (Tampilannya tetap ada, logikanya akan kita sambung nanti)
+  // State untuk POS Dinamis
   const [posList, setPosList] = useState([
     { id: Date.now(), name: '', location: '', duration: '00:00' }
   ]);
 
-  // --- HANDLERS ---
+  // --- HANDLERS UNTUK POS ---
   const handleAddPos = () => {
     setPosList([ ...posList, { id: Date.now(), name: '', location: '', duration: '00:00' } ]);
   };
@@ -36,6 +36,14 @@ export default function CreateSession() {
     }
   };
 
+  // Fungsi baru untuk menangkap ketikan user di setiap input POS
+  const handlePosChange = (id, field, value) => {
+    setPosList(posList.map(pos => 
+      pos.id === id ? { ...pos, [field]: value } : pos
+    ));
+  };
+
+  // --- HANDLER UNTUK FILE GAMBAR ---
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -46,12 +54,11 @@ export default function CreateSession() {
 
   // --- FUNGSI SUBMIT (API CALL) ---
   const handleCreateSession = async (e) => {
-    e.preventDefault(); // Mencegah halaman refresh saat submit form
+    e.preventDefault(); 
 
     try {
       const token = localStorage.getItem('auth_token');
 
-      // Gunakan FormData karena kita mengirim file gambar
       const formData = new FormData();
       formData.append('name', sessionName);
       formData.append('start_time', `${sessionDate} 00:00:00`); 
@@ -62,12 +69,14 @@ export default function CreateSession() {
       if (qrLink) formData.append('qr_link', qrLink);
       if (qrFile) formData.append('qr_image', qrFile);
 
+      // KUNCI UTAMA: Mengirimkan daftar POS ke Laravel dalam bentuk teks JSON
+      formData.append('pos_list', JSON.stringify(posList));
+
       const response = await fetch('/api/sessions', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
           'Authorization': `Bearer ${token}`
-          // Jangan tambahkan Content-Type di sini jika pakai FormData
         },
         body: formData,
       });
@@ -75,7 +84,7 @@ export default function CreateSession() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert(`Sesi berhasil dibuat! Kode Sesi: ${data.data.session_code}`);
+        alert(`Sesi & POS berhasil dibuat! Kode Sesi: ${data.data.session_code}`);
         navigate('/superadmin/home');
       } else {
         alert("Gagal membuat sesi: " + (data.message || "Periksa kembali isian Anda."));
@@ -100,7 +109,6 @@ export default function CreateSession() {
 
         <h1 className="text-[32px] font-bold text-[#1D2B39] mb-10">Buat Sesi</h1>
 
-        {/* BUNGKUS DENGAN FORM AGAR 'REQUIRED' BERFUNGSI */}
         <form onSubmit={handleCreateSession}>
           
           {/* ========================================= */}
@@ -176,15 +184,34 @@ export default function CreateSession() {
                 <div className="flex flex-col gap-4">
                   <div>
                     <label className="block text-[14px] font-bold text-[#1D2B39] mb-1.5">Nama Pos</label>
-                    <input type="text" placeholder="e.g. Pos Lapangan" className="w-full bg-white border border-[#CBD5E1] text-[#1D2B39] placeholder-[#92A0AD] text-[15px] rounded-[12px] px-4 py-3.5 focus:outline-none focus:border-[#2E9AD7]" />
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Pos Lapangan" 
+                      value={pos.name}
+                      onChange={(e) => handlePosChange(pos.id, 'name', e.target.value)}
+                      required
+                      className="w-full bg-white border border-[#CBD5E1] text-[#1D2B39] placeholder-[#92A0AD] text-[15px] rounded-[12px] px-4 py-3.5 focus:outline-none focus:border-[#2E9AD7]" 
+                    />
                   </div>
                   <div>
                     <label className="block text-[14px] font-bold text-[#1D2B39] mb-1.5">Lokasi Pos</label>
-                    <input type="text" placeholder="e.g. Lapangan (Lantai 1)" className="w-full bg-white border border-[#CBD5E1] text-[#1D2B39] placeholder-[#92A0AD] text-[15px] rounded-[12px] px-4 py-3.5 focus:outline-none focus:border-[#2E9AD7]" />
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Lapangan (Lantai 1)" 
+                      value={pos.location}
+                      onChange={(e) => handlePosChange(pos.id, 'location', e.target.value)}
+                      className="w-full bg-white border border-[#CBD5E1] text-[#1D2B39] placeholder-[#92A0AD] text-[15px] rounded-[12px] px-4 py-3.5 focus:outline-none focus:border-[#2E9AD7]" 
+                    />
                   </div>
                   <div>
                     <label className="block text-[14px] font-bold text-[#1D2B39] mb-1.5">Durasi Maks. Check In (Misi)</label>
-                    <input type="time" defaultValue="00:00" className="w-full bg-white border border-[#CBD5E1] text-[#1D2B39] font-bold text-[15px] rounded-[12px] px-4 py-3.5 focus:outline-none focus:border-[#2E9AD7]" />
+                    <input 
+                      type="time" 
+                      value={pos.duration}
+                      onChange={(e) => handlePosChange(pos.id, 'duration', e.target.value)}
+                      required
+                      className="w-full bg-white border border-[#CBD5E1] text-[#1D2B39] font-bold text-[15px] rounded-[12px] px-4 py-3.5 focus:outline-none focus:border-[#2E9AD7]" 
+                    />
                   </div>
                 </div>
               </div>

@@ -5,24 +5,24 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\GameSessionController;
 
-// Rute Login (Bebas diakses)
+// Rute Login
 Route::post('/login', [AuthController::class, 'login']);
 
-// Rute yang wajib pakai Token (Sudah Login)
+// Semua route yang butuh login
 Route::middleware('auth:sanctum')->group(function () {
+
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
 
-    // Pintu untuk MENGAMBIL daftar sesi
     Route::get('/sessions', [GameSessionController::class, 'index']); 
-    
-    // Pintu untuk MEMBUAT sesi game baru
     Route::post('/sessions', [GameSessionController::class, 'store']);
-
-    // Pintu untuk mengambil detail SATU sesi berdasarkan ID
     Route::get('/sessions/{id}', [GameSessionController::class, 'show']);
-    
-    // Pintu untuk mengubah status sesi menjadi 'live' (Mulai Sekarang)
     Route::post('/sessions/{id}/start', [GameSessionController::class, 'start']);
+
+    // 🔥 Gabungan dari kamu + seany
+    Route::get('/sessions/{id}/live', [GameSessionController::class, 'getLiveData']);
+    Route::post('/sessions/{id}/finish-pos', [GameSessionController::class, 'finishPos']);
+    Route::get('/sessions/{id}/leaderboard', [GameSessionController::class, 'getLeaderboard']);
+    Route::post('/sessions/{id}/redeem', [GameSessionController::class, 'redeemCoins']);
 });

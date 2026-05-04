@@ -9,20 +9,21 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
+
     public function up(): void
-{
-    Schema::create('teams', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('game_session_id')->constrained('game_sessions')->onDelete('cascade');
-        $table->string('name');
-        $table->string('major')->nullable();
-        $table->integer('score')->default(0);
-        $table->string('code')->unique(); 
-        $table->boolean('is_redeemed')->default(false); 
-        $table->integer('redeemed_amount')->default(0); 
-        $table->timestamps();
-    });
-}
+    {
+        Schema::create('teams', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('game_session_id')->constrained('game_sessions')->onDelete('cascade'); // Main di sesi mana
+            $table->string('name');
+            $table->string('major'); // Jurusan
+            $table->integer('total_coins')->default(0); // Poin awal selalu 0
+            $table->boolean('is_redeemed')->default(false);
+            $table->integer('redeemed_amount')->default(0);
+            $table->string('emergency_code')->unique()->nullable(); // Kode darurat kalau ter-logout
+            $table->timestamps();
+        });
+    }
 
     /**
      * Reverse the migrations.
