@@ -1,5 +1,5 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React ,{useState,useEffect}from "react";
+import { Link,useLocation} from "react-router-dom";
 // Ganti path import ini menyesuaikan nama file yang kamu simpan di folder assets
 import CoinIcon from "../../assets/coin3D.png";
 import CheckGreenIcon from "../../assets/Visited-Pos.png";
@@ -9,48 +9,89 @@ import GiftBoxIcon from "../../assets/gift-box.png";
 import HomeIcon from "../../assets/Home-Icon.svg";
 import TrophyIcon from "../../assets/Trophy-Icon.svg";
 
+
 export default function MainGameplay() {
   // MOCK DATA: Status timeline (Nanti diatur sama backend/state)
-  const pos_item = [
-    {
-      id: 1,
-      title: "STORY 1",
-      location: "LANTAI 1",
-      status: "completed", // completed | active | locked | reward
-      reward: "+ 220 BeeCoin",
-    },
-    {
-      id: 2,
-      title: "STORY 2",
-      location: "LANTAI 1",
-      status: "active",
-      countdown: "8:43",
-    },
-    {
-      id: 3,
-      title: "STORY 3",
-      location: "LANTAI 2 - WING A",
-      status: "locked",
-    },
-    {
-      id: 4,
-      title: "STORY 4",
-      location: "LANTAI 3 - DEPAN LKC",
-      status: "locked",
-    },
-    {
-      id: 5,
-      title: "STORY 5",
-      location: "LANTAI 4 - WING B",
-      status: "locked",
-    },
-    {
-      id: 6,
-      title: "TUKAR HADIAH",
-      location: "MMG (Lantai 2)",
-      status: "reward",
-    },
-  ];
+  const location = useLocation();
+  const namaTeam = location.state?.nameTeam;
+  const sessionCode = location.state?.sessionCode;
+  const [posts,setPosts] = useState([]);
+  console.log(namaTeam,sessionCode);
+  async function fetchTeamPosts() {
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/team-posts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        session_code: sessionCode,
+        team_name: namaTeam,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.status || "Error fetching posts");
+    }
+
+    // ✅ kalau sukses
+    if (data.status === "success") {
+      console.log("Posts:", data.data);
+
+      // simpan ke state (buat ditampilin nanti)
+      setPosts(data.data);
+    }
+
+  } catch (error) {
+    console.error("Error:", error.message);
+    alert("Gagal ambil data pos!");
+  }
+}
+    useEffect(() => {
+      fetchTeamPosts();
+  }, []);
+  // const pos_item = [
+  //   {
+  //     id: 1,
+  //     title: "STORY 1",
+  //     location: "LANTAI 1",
+  //     status: "completed", // completed | active | locked | reward
+  //     reward: "+ 220 BeeCoin",
+  //   },
+  //   {
+  //     id: 2,
+  //     title: "STORY 2",
+  //     location: "LANTAI 1",
+  //     status: "active",
+  //     countdown: "8:43",
+  //   },
+  //   {
+  //     id: 3,
+  //     title: "STORY 3",
+  //     location: "LANTAI 2 - WING A",
+  //     status: "locked",
+  //   },
+  //   {
+  //     id: 4,
+  //     title: "STORY 4",
+  //     location: "LANTAI 3 - DEPAN LKC",
+  //     status: "locked",
+  //   },
+  //   {
+  //     id: 5,
+  //     title: "STORY 5",
+  //     location: "LANTAI 4 - WING B",
+  //     status: "locked",
+  //   },
+  //   {
+  //     id: 6,
+  //     title: "TUKAR HADIAH",
+  //     location: "MMG (Lantai 2)",
+  //     status: "reward",
+  //   },
+  // ];
 
   // Helper untuk menentukan icon berdasarkan status
   const getIcon = (status) => {
@@ -113,8 +154,8 @@ export default function MainGameplay() {
 
         {/* --- 3. TIMELINE SECTION --- */}
         <div className="px-8 mt-10">
-          {pos_item.map((pos, index) => {
-            const isLast = index === pos_item.length - 1;
+          {posts.map((pos, index) => {
+            const isLast = index === posts.length - 1;
 
             return (
               <div key={pos.id} className="flex gap-5">

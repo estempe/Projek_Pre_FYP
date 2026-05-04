@@ -27,10 +27,11 @@ export default function RejoinSession() {
       return;
     }
   if (data.status === "found") {
+    
     navigate("/gameplay", {
       state: {
-        team: data.team,
-        session: data.session
+        nameTeam:teamName,
+        sessionCode
       }
     });
   } 

@@ -1,10 +1,72 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link,useLocation,useNavigate } from "react-router-dom";
 
 
 export default function CreateTeam() {
   const [teamName, setTeamName] = useState("");
+  const [teamMajor,setTeamMajor] = useState("");
+  const [inputUser,setInputUser] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const sessionCode = location.state?.sessionCode;
+  
+  async function handleCheckTeams() {
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/create-teams", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        session_code: sessionCode,
+        team_name: teamName,
+        team_major: teamMajor,
+      }),
+    });
 
+    const data = await response.json();
+
+    console.log("RESPONSE:", data);
+
+  
+    if (data.status === "invalid_input") {
+      alert("Semua field harus diisi!");
+      return;
+    }
+
+    // 🔴 SESSION GA ADA
+    if (data.status === "session_not_found") {
+      alert("Session tidak ditemukan!");
+      return;
+    }
+
+    // 🟡 TEAM SUDAH ADA
+    if (data.status === "team_exists") {
+      alert("Nama tim sudah digunakan!");
+      return;
+    }
+
+    // 🟢 SUCCESS (TEAM BARU DIBUAT)
+    if (data.status === "team_created") {
+      navigate("/waiting", {
+        state: {
+          sessionCode,
+          nameTeam: teamName,
+        },
+      });
+      return;
+    }
+
+    // ⚠️ fallback (kalau ada status aneh)
+    alert("Terjadi kondisi tidak diketahui");
+
+  } catch (error) {
+    console.error("Error:", error);
+
+    // 🔥 ini untuk error jaringan / server crash
+    alert("Terjadi kesalahan koneksi / server!");
+  }
+}
   return (
     <div className="min-h-screen bg-[#02101B] flex justify-center font-sans">
       {/* Mobile Container (Dark Blue) */}
@@ -48,8 +110,17 @@ export default function CreateTeam() {
             <input
               type="text"
               placeholder="Ketik nama teammu disini!"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
+              value={inputUser}
+              onChange={(e) => {
+              const value = e.target.value;
+              setInputUser(value);
+              
+
+              const [team,major] = value.split("_");
+
+              setTeamMajor(major || "");
+              setTeamName(team || "");
+            }}
               className="w-full font-sans bg-transparent rounded-[18px] py-4 px-6 text-center text-lg text-white font-medium border-2 border-[#546878] placeholder-white/40 placeholder:font-sans placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-[#2E9AD7] focus:border-transparent transition-all"
             />
           </div>
@@ -57,7 +128,9 @@ export default function CreateTeam() {
 
         {/* Bottom Button */}
         <div className="px-8 pb-12 flex flex-col items-center">
-          <button className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[6px] transition-all">
+          <button 
+          onClick={handleCheckTeams}
+          className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[6px] transition-all">
             Sudah? Lanjut!
           </button>
         </div>

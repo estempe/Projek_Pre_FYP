@@ -4,6 +4,8 @@ export default function WaitingRoom() {
   // MOCK DATA / DATA DUMMY, NANTI GANTI PAKAI API AJA
   const location = useLocation();
   const sessionCode = location.state?.sessionCode;
+  const nameTeam = location.state?.nameTeam;
+  console.log(nameTeam)
  const navigate = useNavigate();
   const [teams,setTeams] = useState([]);
    useEffect(() => {
@@ -22,7 +24,12 @@ export default function WaitingRoom() {
 
       if (data.status === "started") {
         console.log("game dimulai");
-        navigate("/gameplay");
+        navigate("/gameplay", {
+        state: {
+          sessionCode,
+          nameTeam,
+        },
+      });
       }
     } catch (error) {
       console.error("Error cek status:", error);

@@ -1,5 +1,5 @@
 import React, { useState,useEffect } from "react";
-import { Link,useNavigate } from "react-router-dom";
+import { Link,useNavigate} from "react-router-dom";
 
 export default function JoinSession() {
   
@@ -21,12 +21,12 @@ export default function JoinSession() {
         session_code: sessionCode,
       }),
   });
-
+  
   const data = await res.json();
 
   if (data.status === "found") {
     // pindah halaman
-    navigate("/waiting", {
+    navigate("/create-team", {
     state: { sessionCode }
   });
   } else {

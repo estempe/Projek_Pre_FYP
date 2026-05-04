@@ -15,7 +15,7 @@ return new class extends Migration
         $table->id();
         $table->foreignId('team_id')->constrained('teams')->onDelete('cascade');
         $table->foreignId('post_id')->constrained('posts')->onDelete('cascade');
-        $table->enum('status', ['ready', 'ongoing', 'done'])->default('ready');
+        $table->enum('status', ['completed', 'active', 'locked','reward'])->default('locked');
         $table->integer('earned_coins')->default(0); 
         $table->timestamp('check_in_time')->nullable(); 
         $table->timestamps();
