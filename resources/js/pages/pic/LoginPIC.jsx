@@ -1,13 +1,46 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 
 export default function LoginPIC() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate(); // 2. Aktifkan navigasi
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    console.log("Mencoba login dengan:", username, password);
-    // Nanti tinggal tambahin logika auth dan navigate ke Home PIC di sini
+    
+    try {
+      // 3. Tembak data ke API Laravel
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      // 4. Cek keberhasilan
+      if (response.ok && data.success) {
+        alert("Login PIC Berhasil! Selamat bertugas, " + data.data.name);
+        
+        // Simpan token ke localStorage
+        localStorage.setItem('auth_token', data.token);
+        
+        // Arahkan ke halaman Home khusus PIC
+        navigate('/pic/home');
+      } else {
+        alert(data.message || "Login gagal, periksa kembali username dan password!");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Gagal terhubung ke server. Pastikan backend menyala!");
+    }
   };
 
   return (
