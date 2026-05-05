@@ -13,6 +13,7 @@ export default function WaitingRoom() {
       .then(res => res.json())
       .then(data => setTeams(data));
   }, []);
+  
   const checkStatus = async () => {
     try {
       const res = await fetch(

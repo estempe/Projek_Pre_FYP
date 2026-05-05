@@ -116,7 +116,7 @@ export default function CreateTeam() {
               setInputUser(value);
               
 
-              const [team,major] = value.split("_");
+              const [major,team] = value.split("_");
 
               setTeamMajor(major || "");
               setTeamName(team || "");
