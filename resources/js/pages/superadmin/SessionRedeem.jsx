@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 
 // --- IMPORT ASSETS (Pakai ../../) ---
 import BackArrowDark from '../../assets/Back-Arrow-Icon-Dark.svg';
@@ -7,74 +7,28 @@ import CoinIcon from '../../assets/Coin3D.png';
 import HomeIcon from '../../assets/Home-Icon.svg';
 import TrophyIcon from '../../assets/Trophy-Icon.svg';
 
-// --- DUMMY DATA ---
-const teamsData = [
-  {
-    id: "t1",
-    name: "SehatSehatMaba",
-    major: "Business Information Technology",
-    totalCoins: 500,
-    isRedeemed: true,
-    redeemedAmount: 300
-  },
-  {
-    id: "t2",
-    name: "AdadehPokoknya",
-    major: "Business Management",
-    totalCoins: 400,
-    isRedeemed: false,
-    redeemedAmount: 0
-  },
-  {
-    id: "t3",
-    name: "AdadehPokoknya",
-    major: "Business Management",
-    totalCoins: 380,
-    isRedeemed: false,
-    redeemedAmount: 0
-  },
-  {
-    id: "t4",
-    name: "AdadehPokoknya",
-    major: "Business Management",
-    totalCoins: 320,
-    isRedeemed: false,
-    redeemedAmount: 0
-  }
-];
-
 // --- KOMPONEN KARTU REDEEM ---
 const RedeemCardSuperadmin = ({ team, onTukarClick }) => {
   return (
     <div className="bg-white rounded-[20px] p-5 shadow-sm border border-white flex flex-col mb-4 relative z-10">
-      
-      {/* Bagian Atas: Nama Tim */}
       <div className="mb-4">
         <h3 className="text-[16px] font-bold text-[#1D2B39] leading-tight mb-1">{team.name}</h3>
         <p className="text-[#92A0AD] text-[11px] font-medium leading-none">{team.major}</p>
       </div>
-
       <hr className="border-[#F1F5F9] mb-4" />
-
-      {/* Bagian Bawah: Info Koin & Tombol */}
       <div className="flex justify-between items-center">
-        
-        {/* Sisi Kiri: Status Koin (Susun Atas Bawah) */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5">
             <img src={CoinIcon} alt="Coin" className="w-[14px] h-[14px] object-contain drop-shadow-sm" />
-            <span className="text-[#E5A015] font-bold text-[12px]">{team.totalCoins} BeeCoin</span>
+            <span className="text-[#E5A015] font-bold text-[12px]">{team.balance} BeeCoin</span>
           </div>
-          
-          {team.isRedeemed && (
+          {team.isRedeemed ? (
             <div className="flex items-center gap-1.5">
               <img src={CoinIcon} alt="Coin" className="w-[14px] h-[14px] object-contain drop-shadow-sm" />
               <span className="text-[#E53E3E] font-bold text-[12px]">- {team.redeemedAmount} BeeCoin</span>
             </div>
-          )}
+          ) : null}
         </div>
-
-        {/* Sisi Kanan: Tombol Aksi */}
         {team.isRedeemed ? (
           <button disabled className="bg-[#b1b8c0] text-white font-bold text-[11px] px-4 py-2.5 rounded-lg cursor-not-allowed">
             Sudah Ditukar
@@ -87,7 +41,6 @@ const RedeemCardSuperadmin = ({ team, onTukarClick }) => {
             Tukar Hadiah
           </button>
         )}
-
       </div>
     </div>
   );
@@ -95,28 +48,94 @@ const RedeemCardSuperadmin = ({ team, onTukarClick }) => {
 
 
 // --- KOMPONEN UTAMA ---
-export default function SessionRedeem() {
+export default function SessionRedeemSuperadmin() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
+  const [sessionName, setSessionName] = useState('Memuat Sesi...');
+  const [teamsData, setTeamsData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Modal States: 'idle' | 'input' | 'success' | 'end_event'
   const [modalState, setModalState] = useState('idle'); 
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [redeemInput, setRedeemInput] = useState('');
+
+  // Tarik Data Tim & Sesi dari API
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      // Ambil data klasemen/koin
+      const resLeaderboard = await fetch(`/api/sessions/${id}/leaderboard`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      // Ambil nama sesi
+      const resSession = await fetch(`/api/sessions/${id}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      const dataLeaderboard = await resLeaderboard.json();
+      const dataSession = await resSession.json();
+
+      if (resLeaderboard.ok && dataLeaderboard.success) setTeamsData(dataLeaderboard.data);
+      if (resSession.ok && dataSession.success) setSessionName(dataSession.data.name);
+
+    } catch (error) {
+      console.error("Gagal mengambil data:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [id]);
 
   // Handlers untuk Tukar Hadiah
   const handleTukarClick = (team) => {
     setSelectedTeam(team);
     setModalState('input'); 
   };
-  const handleProsesTukar = () => setModalState('success');
+
+  const handleProsesTukar = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/sessions/${id}/redeem`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ team_id: selectedTeam.id, amount: redeemInput })
+      });
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setModalState('success');
+        fetchData(); // Refresh data koin terbaru
+      } else {
+        alert(result.message);
+      }
+    } catch (error) {
+      alert("Gagal memproses penukaran.");
+    }
+  };
   
   // Handlers untuk Tutup Event
   const handleAkhirkanSesi = () => setModalState('end_event');
-  const processCloseEvent = () => {
-    console.log("Event ditutup sepenuhnya!");
-    // navigate('/superadmin/home'); // Nanti uncomment untuk redirect ke Home
-    setModalState('idle');
-    alert("Seluruh sesi telah resmi ditutup!");
+  const processCloseEvent = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/sessions/${id}/end`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        alert("Seluruh sesi telah resmi ditutup!");
+        navigate('/superadmin/home');
+      }
+    } catch (error) {
+      alert("Gagal menutup sesi.");
+    }
   };
 
   const closeModal = () => {
@@ -135,10 +154,10 @@ export default function SessionRedeem() {
         
         {/* --- HEADER DENGAN TOMBOL AKHIRKAN SESI --- */}
         <div className="flex justify-between items-center mb-8 relative z-10">
-          <Link to="/superadmin/home" className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
             <img src={BackArrowDark} alt="Kembali" className="w-5 h-5" />
             Kembali
-          </Link>
+          </button>
           
           <button 
             onClick={handleAkhirkanSesi}
@@ -150,7 +169,7 @@ export default function SessionRedeem() {
 
         {/* --- NAMA SESI & JUDUL REDEEM --- */}
         <h2 className="text-[14px] font-bold text-[#1D2B39] mb-8 leading-tight relative z-10">
-          PRE FYP B30 - BATCH 1
+          {sessionName}
         </h2>
 
         <h1 className="text-[36px] font-bold text-[#1D2B39] text-center mb-10 leading-none tracking-tight relative z-10">
@@ -160,10 +179,7 @@ export default function SessionRedeem() {
         {/* --- SEARCH BAR --- */}
         <div className="mb-6 relative z-10">
           <input 
-            type="text" 
-            placeholder="Cari team..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            type="text" placeholder="Cari team..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white border border-[#CBD5E1] rounded-[16px] py-3.5 px-5 text-[14px] text-[#1D2B39] placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] shadow-sm transition-colors"
           />
         </div>
@@ -171,12 +187,9 @@ export default function SessionRedeem() {
         {/* --- DAFTAR TEAM CARDS --- */}
         <div className="flex flex-col">
           {filteredTeams.map((team) => (
-            <RedeemCardSuperadmin 
-              key={team.id}
-              team={team} 
-              onTukarClick={handleTukarClick}
-            />
+            <RedeemCardSuperadmin key={team.id} team={team} onTukarClick={handleTukarClick} />
           ))}
+          {filteredTeams.length === 0 && <p className="text-center text-gray-500 mt-4">Tim tidak ditemukan.</p>}
         </div>
 
         {/* --- BOTTOM NAVIGATION --- */}
@@ -184,11 +197,10 @@ export default function SessionRedeem() {
           <Link to="/superadmin/home" className="hover:scale-110 transition-transform">
             <img src={HomeIcon} alt="Home" className="w-7 h-7" />
           </Link>
-          <Link to="/superadmin/leaderboard" className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
+          <Link to={`/superadmin/leaderboard/${id}`} className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
             <img src={TrophyIcon} alt="Reward" className="w-7 h-7" />
           </Link>
         </div>
-
 
         {/* ================================================== */}
         {/* AREA MODAL / POP-UP OVERLAY                       */}
@@ -200,20 +212,17 @@ export default function SessionRedeem() {
             {modalState === 'input' && selectedTeam && (
               <div className="w-full max-w-[340px] bg-white rounded-[24px] p-6 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] flex flex-col items-center text-center animate-fade-in-up">
                 <h2 className="text-[18px] font-bold text-[#1D2B39] mb-6 leading-relaxed">
-                  Kurangkan BeeCoin<br />
-                  ({selectedTeam.name})
+                  Kurangkan BeeCoin<br />({selectedTeam.name})
                 </h2>
-                
                 <input 
-                  type="number" 
-                  placeholder="Jumlah koin yang ditukar..."
-                  value={redeemInput}
-                  onChange={(e) => setRedeemInput(e.target.value)}
+                  type="number" placeholder="Jumlah koin yang ditukar..." value={redeemInput} onChange={(e) => setRedeemInput(e.target.value)}
                   className="w-full border border-[#CBD5E1] rounded-[14px] py-3.5 px-4 text-center text-[15px] text-[#1D2B39] font-medium placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] mb-6"
                 />
-
-                <button onClick={handleProsesTukar} className="w-full bg-[#2E9AD7] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#2e84b6] shadow-[0_4px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[4px] transition-all">
+                <button onClick={handleProsesTukar} className="w-full bg-[#2E9AD7] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#2e84b6] shadow-[0_4px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[4px] transition-all mb-3">
                   Tukarkan
+                </button>
+                <button onClick={closeModal} className="w-full bg-white text-[#1D2B39] font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#1D2B39] hover:bg-gray-50 transition-all">
+                  Batal
                 </button>
               </div>
             )}
@@ -221,29 +230,21 @@ export default function SessionRedeem() {
             {/* MODAL 2: PENUKARAN BERHASIL */}
             {modalState === 'success' && (
               <div className="w-full max-w-[340px] bg-white rounded-[24px] p-8 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] flex flex-col items-center text-center animate-fade-in-up">
-                <h2 className="text-[18px] font-bold text-[#1D2B39] mb-8">
-                  Penukaran Berhasil!
-                </h2>
+                <h2 className="text-[18px] font-bold text-[#1D2B39] mb-8">Penukaran Berhasil!</h2>
                 <button onClick={closeModal} className="w-full bg-[#2E9AD7] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#2e84b6] shadow-[0_4px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[4px] transition-all">
                   Oke, Lanjut
                 </button>
               </div>
             )}
 
-            {/* MODAL 3: KONFIRMASI TUTUP ACARA (AKHIRKAN SESI) */}
+            {/* MODAL 3: KONFIRMASI TUTUP ACARA */}
             {modalState === 'end_event' && (
               <div className="w-full max-w-[340px] bg-white rounded-[24px] p-6 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] flex flex-col items-center text-center animate-fade-in-up">
                 <div className="w-14 h-14 bg-[#FEE2E2] text-[#E53E3E] rounded-full flex items-center justify-center mb-5">
                   <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                 </div>
-                
-                <h2 className="text-[18px] font-bold text-[#1D2B39] mb-3 leading-relaxed">
-                  Akhiri Seluruh Rangkaian<br />Acara Ini?
-                </h2>
-                <p className="text-[#92A0AD] text-[12px] mb-8 px-2">
-                  Penukaran hadiah akan ditutup. Semua data tim akan diarsipkan dan tidak bisa diubah lagi.
-                </p>
-                
+                <h2 className="text-[18px] font-bold text-[#1D2B39] mb-3 leading-relaxed">Akhiri Seluruh Rangkaian<br />Acara Ini?</h2>
+                <p className="text-[#92A0AD] text-[12px] mb-8 px-2">Penukaran hadiah akan ditutup. Semua data tim akan diarsipkan dan tidak bisa diubah lagi.</p>
                 <div className="w-full flex flex-col gap-3">
                   <button onClick={processCloseEvent} className="w-full bg-[#E53E3E] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#C53030] shadow-[0_4px_0_0_#9B2C2C] hover:bg-[#C53030] active:shadow-[0_0_0_0_#9B2C2C] active:translate-y-[4px] transition-all">
                     Ya, Akhiri Sesi

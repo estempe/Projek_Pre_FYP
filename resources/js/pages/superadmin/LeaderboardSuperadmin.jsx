@@ -34,7 +34,7 @@ export default function LeaderboardSuperadmin() {
     // 2. Buat interval untuk memanggil data ulang setiap 5 detik (5000 ms)
     const intervalId = setInterval(() => {
       fetchLeaderboard();
-    }, 5000);
+    }, 2000);
 
     // 3. Bersihkan interval saat Superadmin pindah ke halaman lain agar tidak bocor (memory leak)
     return () => clearInterval(intervalId);

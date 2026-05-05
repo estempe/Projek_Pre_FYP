@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class TeamPost extends Model
 {
-    //
-}
     use HasFactory;
 
     protected $fillable = [

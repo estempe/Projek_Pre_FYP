@@ -49,10 +49,10 @@ export default function App() {
         {/* PIC */}
         <Route path="/pic/login" element={<LoginPIC />} />
         <Route path="/pic/home" element={<ProtectedRoute><HomePIC /></ProtectedRoute>} />
-        <Route path="/pic/session-detail" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
-        <Route path="/pic/session-live" element={<ProtectedRoute><SessionLive /></ProtectedRoute>} />
-        <Route path="/pic/leaderboard" element={<ProtectedRoute><LeaderboardPIC /></ProtectedRoute>} />
-        <Route path="/pic/session-redeem" element={<ProtectedRoute><SessionRedeem /></ProtectedRoute>} />
+        <Route path="/pic/session-detail/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
+        <Route path="/pic/session-live/:id" element={<ProtectedRoute><SessionLive /></ProtectedRoute>} />
+        <Route path="/pic/leaderboard/:id" element={<ProtectedRoute><LeaderboardPIC /></ProtectedRoute>} />
+        <Route path="/pic/session-redeem/:id" element={<ProtectedRoute><SessionRedeem /></ProtectedRoute>} />
 
         {/* SuperAdmin */}
         <Route path="/superadmin/login" element={<LoginSuperadmin />} />

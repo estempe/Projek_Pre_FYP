@@ -1,106 +1,83 @@
-import React from "react";
-import { Link } from "react-router-dom";
-// Pastikan path import ini sesuai dengan struktur folder assets-mu
-import CoinIcon from "../../assets/coin3D.png";
+import React, { useState, useEffect } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import CoinIcon from "../../assets/Coin3D.png";
 import HomeIcon from "../../assets/Home-Icon.svg";
 import TrophyIcon from "../../assets/Trophy-Icon.svg";
 
 export default function LeaderboardPIC() {
-  // MOCK DATA: Nanti data ini di-fetch dari backend/database
-  // isCurrentUser digunakan untuk menandai baris milik mahasiswa yang sedang buka app
-  // isFinished digunakan untuk memunculkan badge ungu "Selesai"
-  const leaderboardData = [
-    { id: 1, rank: 1, name: "TeamPalingOke", major: "Business Management", score: 930, isFinished: true },
-    { id: 2, rank: 2, name: "JagonyaBinus", major: "Creative Communication", score: 852, isFinished: true },
-    { id: 3, rank: 3, name: "AdadehPokoknya", major: "Business Management", score: 310 },
-    { id: 4, rank: 4, name: "Tes1234", major: "Business Information Technology", score: 220, isCurrentUser: true },
-    { id: 5, rank: 5, name: "SehatSehatMaba", major: "Business Information Technology", score: 190 },
-    { id: 6, rank: 6, name: "SokSuciGitu", major: "Creative Communication", score: 184 },
-    { id: 7, rank: 7, name: "KanKitaMahPinter", major: "Business Hotel Management", score: 100 },
-    { id: 8, rank: 8, name: "LahKokGitu!", major: "Computer Science", score: 80 },
-  ];
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch(`/api/sessions/${id}/leaderboard`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+          setLeaderboardData(result.data);
+        }
+      } catch (error) {
+        console.error("Gagal mengambil leaderboard:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLeaderboard();
+    const intervalId = setInterval(() => { fetchLeaderboard(); }, 2000);
+    return () => clearInterval(intervalId);
+  }, [id]);
 
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-32">
       <div className="w-full max-w-md min-h-screen flex flex-col relative">
-        
-        {/* --- HEADER --- */}
-        <div className="pt-16 pb-8 flex justify-center">
-          <h1 className="text-[22px] font-bold text-[#1D2A34] tracking-wide">
-            LEADERBOARD
-          </h1>
+        <div className="pt-12 px-6 flex justify-between items-center">
+           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-[#1D2B39] font-bold text-[15px]">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"></path></svg>
+            Kembali
+          </button>
+          {/* Tombol Menuju Halaman Redeem Kasir PIC */}
+          <button onClick={() => navigate(`/pic/session-redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-[#268bc4]">
+            Buka Kasir Redeem
+          </button>
         </div>
 
-        {/* --- LIST KLASEMEN --- */}
+        <div className="pt-8 pb-8 flex justify-center">
+          <h1 className="text-[22px] font-bold text-[#1D2A34] tracking-wide">LEADERBOARD</h1>
+        </div>
+
         <div className="px-6 flex flex-col gap-4">
+          {isLoading ? <p className="text-center text-gray-500">Memuat klasemen...</p> : leaderboardData.length === 0 ? <p className="text-center text-gray-500">Belum ada tim.</p> : null}
           {leaderboardData.map((team) => (
-            <div
-              key={team.id}
-              // Logika Dinamis: Jika isCurrentUser true, border hitam solid tebal. Kalau tidak, putus-putus.
-              className={`flex items-center bg-white rounded-[20px] p-4 ${
-                team.isCurrentUser
-                  ? "border-2 border-[#02101B] shadow-sm"
-                  : "border border-dashed border-[#A0B0BC] shadow-sm"
-              }`}
-            >
-              
-              {/* Kolom Rank (Kiri) */}
+            <div key={team.id} className="flex items-center bg-white rounded-[20px] p-4 border border-[#CBD5E1] shadow-sm">
               <div className="w-10 shrink-0">
-                <span 
-                  className={`text-[18px] font-bold ${
-                    team.isCurrentUser ? "text-[#02101B]" : "text-[#8C9BA5]"
-                  }`}
-                >
-                  #{team.rank}
-                </span>
+                <span className="text-[18px] font-bold text-[#02101B]">#{team.rank}</span>
               </div>
-
-              {/* Kolom Info Tim (Tengah) */}
               <div className="flex-1 flex flex-col justify-center min-w-0 pr-2">
-                
-                {/* Badge Selesai (Ungu) */}
-                {team.isFinished && (
-                  <div className="w-fit bg-[#8900E8] text-white px-3 py-0.5 rounded-full text-[10px] font-bold tracking-wide mb-1">
-                    Selesai
-                  </div>
-                )}
-                
-                {/* Nama Tim */}
-                <p className="text-[#02101B] text-[16px] font-medium truncate w-full">
-                  {team.name}
-                </p>
-                
-                {/* Jurusan */}
-                <p className="text-[#8C9BA5] text-[11px] font-light truncate w-full">
-                  {team.major}
-                </p>
+                <p className="text-[#02101B] text-[16px] font-medium truncate w-full">{team.name}</p>
+                <p className="text-[#8C9BA5] text-[11px] font-light truncate w-full">{team.major}</p>
               </div>
-
-              {/* Kolom Skor/Koin (Kanan) */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <img src={CoinIcon} alt="coin" className="w-4 h-4 object-contain" />
-                <span className="font-medium text-[#E5A015] text-[16px]">
-                  {team.score}
-                </span>
+                <span className="font-medium text-[#E5A015] text-[16px]">{team.score}</span>
               </div>
-              
             </div>
           ))}
         </div>
 
-        {/* --- FLOATING BOTTOM NAVIGATION --- */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50">
-          {/* Home Icon (Inactive) - Ganti jadi Link menuju /gameplay */}
-          <Link to="/pic/session-live" className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
+          <Link to={`/pic/session-live/${id}`} className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
             <img src={HomeIcon} alt="Home" className="w-7 h-7" />
           </Link>
-
-          {/* Trophy Icon (Active) - Tetap tombol biasa karena kita sedang di Leaderboard */}
           <button className="hover:scale-110 opacity-100 transition-transform">
             <img src={TrophyIcon} alt="Reward" className="w-7 h-7" />
           </button>
         </div>
-
       </div>
     </div>
   );

@@ -95,7 +95,7 @@ class GameSessionController extends Controller
         return response()->json(['success' => true, 'data' => $session], 200);
     }
 
-    // Fungsi untuk memulai sesi (ubah status jadi live)
+    // Fungsi untuk memulai sesi
     public function start($id)
     {
         $session = GameSession::find($id);
@@ -103,6 +103,13 @@ class GameSessionController extends Controller
             return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
         }
 
+        // KUNCI PENGAMAN: Jika sudah live, jangan reset waktu mulainya!
+        if ($session->status === 'live') {
+            return response()->json(['success' => true, 'message' => 'Sesi sudah berjalan, langsung dialihkan!'], 200);
+        }
+
+        // Set waktu mulai HANYA 1 KALI saat pertama kali tombol ditekan
+        $session->start_time = now();
         $session->status = 'live';
         $session->save();
 
@@ -119,19 +126,40 @@ class GameSessionController extends Controller
             return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
         }
 
-        // Ambil semua tim di sesi ini
+        // --- HITUNG SISA WAKTU SECARA ABSOLUT ---
+        $remainingSeconds = 0;
+        if ($session->start_time && $session->status === 'live') {
+            $durationParts = explode(':', $session->duration);
+            $hours = isset($durationParts[0]) ? (int)$durationParts[0] : 0;
+            $minutes = isset($durationParts[1]) ? (int)$durationParts[1] : 0;
+            $seconds = isset($durationParts[2]) ? (int)$durationParts[2] : 0;
+            
+            $totalDurationSec = ($hours * 3600) + ($minutes * 60) + $seconds;
+            
+            // Hitung selisih waktu pakai native PHP
+            $waktuMulai = strtotime($session->start_time);
+            $waktuSekarang = time();
+            
+            $elapsedSec = $waktuSekarang - $waktuMulai;
+            
+            // Cegah angka negatif jika terjadi pergeseran server sedetik
+            if ($elapsedSec < 0) {
+                $elapsedSec = 0;
+            }
+            
+            $remainingSeconds = (int) ceil(max(0, $totalDurationSec - $elapsedSec));
+        }
+        // Ambil data tim & poin
         $teams = \App\Models\Team::where('game_session_id', $id)->get();
-        // Ambil semua riwayat pos dari tim-tim tersebut
         $teamPosts = \App\Models\TeamPost::whereIn('team_id', $teams->pluck('id'))->get();
 
-        // Gabungkan data agar strukturnya persis seperti yang diminta React
         $formattedTeams = $teams->map(function($team) use ($teamPosts) {
             $posStatus = [];
             foreach($teamPosts->where('team_id', $team->id) as $tp) {
                 $posStatus[$tp->post_id] = [
-                    'state'       => $tp->status, // 'completed', 'active', 'locked'
+                    'state'       => $tp->status,
                     'earnedCoins' => $tp->earned_coins,
-                    'countdown'   => '00:00' // Placeholder
+                    'countdown'   => '00:00'
                 ];
             }
             return [
@@ -139,14 +167,15 @@ class GameSessionController extends Controller
                 'name'       => $team->name,
                 'major'      => $team->major,
                 'totalCoins' => $team->total_coins,
-                'posStatus'  => (object)$posStatus // Ubah jadi Object JSON
+                'posStatus'  => (object)$posStatus
             ];
         });
 
         return response()->json([
-            'success' => true,
-            'session' => $session,
-            'teams'   => $formattedTeams
+            'success'           => true,
+            'session'           => $session,
+            'teams'             => $formattedTeams,
+            'remaining_seconds' => $remainingSeconds // Dikirim ke React dalam wujud angka bulat
         ]);
     }
 
@@ -179,11 +208,13 @@ class GameSessionController extends Controller
     // --- FUNGSI UNTUK LEADERBOARD & REDEEM ---
 
     // Mengambil klasemen tim
+    // Mengambil klasemen tim
     public function getLeaderboard($id)
     {
-        // Ambil tim berdasarkan sesi, urutkan dari koin terbesar ke terkecil
+        // Hitung poin asli (sisa koin + yang sudah diredeem) secara dinamis
         $teams = \App\Models\Team::where('game_session_id', $id)
-                    ->orderBy('total_coins', 'desc')
+                    ->selectRaw('teams.*, (total_coins + redeemed_amount) as all_time_score')
+                    ->orderBy('all_time_score', 'desc') // Urutkan berdasarkan poin asli tertinggi
                     ->get();
 
         $leaderboard = $teams->map(function($team, $index) {
@@ -192,9 +223,10 @@ class GameSessionController extends Controller
                 'rank'           => $index + 1,
                 'name'           => $team->name,
                 'major'          => $team->major,
-                'score'          => $team->total_coins,
-                'isRedeemed'     => $team->is_redeemed,
-                'redeemedAmount' => $team->redeemed_amount
+                'score'          => (int) $team->all_time_score, // Tampil di Leaderboard (Poin Utuh)
+                'balance'        => (int) $team->total_coins,    // Tampil di Kasir Redeem (Sisa Saldo)
+                'isRedeemed'     => (bool) $team->is_redeemed,
+                'redeemedAmount' => (int) $team->redeemed_amount
             ];
         });
 
@@ -226,5 +258,19 @@ class GameSessionController extends Controller
         $team->save();
 
         return response()->json(['success' => true, 'message' => 'Koin berhasil ditukar!']);
+    }
+
+    // Fungsi untuk mengakhiri sesi
+    public function endSession($id)
+    {
+        $session = GameSession::find($id);
+        if (!$session) {
+            return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
+        }
+
+        $session->status = 'ended';
+        $session->save();
+
+        return response()->json(['success' => true, 'message' => 'Sesi resmi ditutup!']);
     }
 }
