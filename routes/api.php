@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\GameSessionController;
 
+
 // Rute Login (Bebas diakses)
 Route::post('/login', [AuthController::class, 'login']);
 
