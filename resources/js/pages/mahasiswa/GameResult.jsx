@@ -1,4 +1,5 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState,useEffect} from "react";
+import { useLocation,useNavigate} from "react-router-dom";
 import * as htmlToImage from 'html-to-image'; 
 import CoinIcon from "../../assets/Coin3D.png"; 
 import FallbackQR from "../../assets/qr-example.png"; 
@@ -9,14 +10,45 @@ import GhostLove from "../../assets/ghost-love.png";
 // DATA MASIH DUMMY, NANTI GANTI PAKAI API AJA
 
 export default function GameResult() {
-  const [score, setScore] = useState(200); 
+  const [coins, setCoins] = useState(0);
   const [isQROpen, setIsQROpen] = useState(false); 
-
+  const location = useLocation();
+  const navigate = useNavigate();
+  const sessionCode = location.state?.sessionCode;
+  const nameTeam = location.state?.nameTeam;
   // --- LOGIC BARU: 3 TINGKATAN TEMA ---
-  const isLove = score > 800;
-  const isHappy = score >= 500 && score <= 800;
-  const isHorror = score < 500;
+  
+  useEffect(() => {
+  async function handleShowCoin() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/getTeamCoins", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_code: sessionCode,
+          team_name: nameTeam,
+        }),
+      });
 
+      const data = await response.json();
+
+      if (data.status === "success") {
+        setCoins(data.total_coins);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  if (sessionCode && nameTeam) {
+    handleShowCoin();
+  }
+}, [sessionCode, nameTeam]);
+  const isLove = coins > 800;
+  const isHappy = coins >= 500 && coins <= 800;
+  const isHorror = coins < 500;
   const teamName = isLove ? "PenuhCinta" : isHappy ? "AdadehPokoknya" : "LahKokGitu!";
 
   // --- DATA DINAMIS DARI SUPERADMIN ---
@@ -78,7 +110,7 @@ export default function GameResult() {
         });
         
         const link = document.createElement("a");
-        link.download = `Story-${teamName}.png`;
+        link.download = `Story-${nameTeam}.png`;
         link.href = dataUrl;
         link.click();
       } catch (error) {
@@ -133,7 +165,7 @@ export default function GameResult() {
             <div className="text-center z-20 flex flex-col items-center w-full mt-auto">
               <p className={`${theme.cardSubTextColor} text-[11px] mb-0.5 transition-colors`}>Team</p>
               <h3 className={`${theme.cardTextColor} text-[22px] font-bold mb-1 leading-none transition-colors`}>
-                {teamName}
+                {nameTeam}
               </h3>
               <p className={`${theme.cardSubTextColor} text-[10px] mb-3 max-w-[150px] leading-tight transition-colors`}>
                 {theme.teamMessage}
@@ -142,7 +174,7 @@ export default function GameResult() {
               <div className="flex items-center justify-center gap-1.5">
                 <img src={CoinIcon} alt="coin" className="w-[22px] h-[22px] object-contain" />
                 <span className="font-bold text-[#E5A015] text-[28px] leading-none">
-                  {score}
+                  {coins}
                 </span>
               </div>
             </div>
@@ -185,9 +217,9 @@ export default function GameResult() {
         <div className="mt-12 pt-4 border-t border-gray-500/20 w-full flex flex-col items-center">
            <p className={`text-[10px] ${theme.subTitleColor} mb-2 font-mono transition-colors`}>-- DEV MODE: GANTI TEMA --</p>
            <div className="flex gap-2">
-             <button onClick={() => setScore(200)} className="bg-[#2A3140] text-white font-bold px-3 py-1.5 rounded text-[10px]">Horor (200)</button>
-             <button onClick={() => setScore(600)} className="bg-white text-[#1D2B39] font-bold px-3 py-1.5 rounded text-[10px] border border-gray-300">Happy (600)</button>
-             <button onClick={() => setScore(1230)} className="bg-[#FFF1F2] text-[#9D174D] font-bold px-3 py-1.5 rounded text-[10px] border border-[#FDA4AF]">Love (1230)</button>
+             <button onClick={() => setCoins(coins)} className="bg-[#2A3140] text-white font-bold px-3 py-1.5 rounded text-[10px]">Horor (200)</button>
+             <button onClick={() => setCoins(coins)} className="bg-white text-[#1D2B39] font-bold px-3 py-1.5 rounded text-[10px] border border-gray-300">Happy (600)</button>
+             <button onClick={() => setCoins(coins)} className="bg-[#FFF1F2] text-[#9D174D] font-bold px-3 py-1.5 rounded text-[10px] border border-[#FDA4AF]">Love (1230)</button>
            </div>
         </div>
 

@@ -23,6 +23,39 @@ export default function Leaderboard() {
       },
     });
 }
+const checkStatus = async () => {
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/session-status/${sessionCode}`
+      );
+      const data = await res.json();
+
+      console.log("Status:", data.status);
+
+      if (data.status === "ended") {
+        
+        navigate("/result", {
+        state: {
+          sessionCode: sessionCode,
+          nameTeam: namaTeam,
+        },
+      });
+      }
+    } catch (error) {
+      console.error("Error cek status:", error);
+    }
+  };
+
+
+    useEffect(() => {
+      if (!sessionCode) return;
+
+      const interval = setInterval(() => {
+        checkStatus();
+      }, 2000); // cek tiap 2 detik
+
+      return () => clearInterval(interval);
+    }, [sessionCode]);
   async function fetchLeaderboard() {
     try {
       const response = await fetch("http://127.0.0.1:8000/api/leaderboard", {
