@@ -143,6 +143,7 @@ Route::post('/rejoin', function (Request $request) {
     return response()->json(['status' => 'team_not_found'], 404);
 });
 
+
 Route::post('/leaderboard', function (Request $request) {
 
     // 1. cari session
@@ -154,26 +155,65 @@ Route::post('/leaderboard', function (Request $request) {
         ], 404);
     }
 
-    // 2. ambil semua team + total coins
+    // 2. ambil leaderboard + total coins
     $leaderboard = DB::table('teams')
         ->leftJoin('team_posts', function ($join) {
-            $join->on('teams.id', '=', 'team_posts.team_id')
-                 ->where('team_posts.status', 'reward'); // 🔥 filter di JOIN
+            $join->on('teams.id', '=', 'team_posts.team_id');
         })
         ->where('teams.game_session_id', $session->id)
         ->select(
             'teams.id',
             'teams.name',
             'teams.major',
-            DB::raw('COALESCE(SUM(team_posts.earned_coins), 0) as total_coins')
+
+            // total coins (reward saja)
+            DB::raw('COALESCE(SUM(CASE WHEN team_posts.status = "reward" THEN team_posts.earned_coins ELSE 0 END), 0) as total_coins'),
+
+            // total post
+            DB::raw('COUNT(team_posts.id) as total_posts'),
+
+            // jumlah post selesai
+            DB::raw('SUM(CASE WHEN team_posts.status = "reward" THEN 1 ELSE 0 END) as completed_posts')
         )
         ->groupBy('teams.id', 'teams.name', 'teams.major')
-        ->orderByDesc('total_coins') // 🔥 ranking
+        ->orderByDesc('total_coins')
         ->get();
+
+    // 3. tentukan isFinished
+    $leaderboard = $leaderboard->map(function ($team) {
+        $team->isFinished = ($team->total_posts > 0 && $team->total_posts == $team->completed_posts);
+        return $team;
+    });
 
     return response()->json([
         'status' => 'success',
         'data' => $leaderboard
+    ]);
+});
+Route::post('/sessionData', function (Request $request) {
+
+    $session = GameSession::where('session_code', $request->session_code)->first();
+
+    if (!$session) {
+        return response()->json([
+            'status' => 'session_not_found'
+        ], 404);
+    }
+
+    return response()->json([
+        'status' => 'success',
+        'data' => [
+            'id' => $session->id,
+            'name' => $session->name,
+            'session_code' => $session->session_code,
+            'start_time' => $session->start_time,
+            'duration' => $session->duration,
+            'redeem_name' => $session->redeem_name,
+            'redeem_location' => $session->redeem_location,
+            'qr_link' => $session->qr_link,
+            'qr_image_path' => $session->qr_image_path,
+            'status' => $session->status,
+        ]
     ]);
 });
 Route::post('/getTeamCoins', function (Request $request) {

@@ -12,12 +12,37 @@ import GhostLove from "../../assets/ghost-love.png";
 export default function GameResult() {
   const [coins, setCoins] = useState(0);
   const [isQROpen, setIsQROpen] = useState(false); 
+  const [sessionData,setSessionData] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
   const sessionCode = location.state?.sessionCode;
   const nameTeam = location.state?.nameTeam;
   // --- LOGIC BARU: 3 TINGKATAN TEMA ---
-  
+  useEffect(() => {
+  if (!sessionCode) return;
+
+  const fetchSessionData = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/sessionData", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_code: sessionCode,
+        }),
+      });
+
+      const data = await res.json();
+      setSessionData(data.data);
+      
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  fetchSessionData();
+}, [sessionCode]);
   useEffect(() => {
   async function handleShowCoin() {
     try {
@@ -46,17 +71,18 @@ export default function GameResult() {
     handleShowCoin();
   }
 }, [sessionCode, nameTeam]);
+  
   const isLove = coins > 800;
   const isHappy = coins >= 500 && coins <= 800;
   const isHorror = coins < 500;
   const teamName = isLove ? "PenuhCinta" : isHappy ? "AdadehPokoknya" : "LahKokGitu!";
 
   // --- DATA DINAMIS DARI SUPERADMIN ---
-  const sessionData = {
-    redeemLocation: "MMG (Lantai 2)",
-    qrLink: "https://s.id/KlaimHadiahFYP", 
-    qrImage: FallbackQR 
-  };
+  // const sessionData = {
+  //   redeemLocation: "MMG (Lantai 2)",
+  //   qrLink: "https://s.id/KlaimHadiahFYP", 
+  //   qrImage: FallbackQR 
+  // };
 
   // --- THEME CONFIGURATION (Ditambah Love/Rare Theme) ---
   const theme = {
@@ -196,14 +222,14 @@ export default function GameResult() {
           className="mt-6 bg-white rounded-[14px] p-2 flex items-center gap-3 w-[240px] shadow-sm border border-gray-100 cursor-pointer hover:scale-105 active:scale-95 transition-all"
         >
           <div className="w-12 h-12 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 border border-gray-100 p-1">
-            <img src={sessionData.qrImage} alt="QR Code" className="w-full h-full object-contain" />
+            <img src={sessionData.qr_image_path} alt="QR Code" className="w-full h-full object-contain" />
           </div>
           <div className="flex-1 min-w-0"> 
             <span 
               className="block text-[13px] font-semibold text-[#1D2B39] underline underline-offset-2 truncate"
-              title={sessionData.qrLink}
+              title={sessionData.qr_link}
             >
-              {sessionData.qrLink}
+              {sessionData.qr_link}
             </span>
           </div>
         </div>
@@ -240,17 +266,17 @@ export default function GameResult() {
             </h2>
             
             <div className="w-48 h-48 bg-white rounded-2xl flex items-center justify-center p-2 mb-6 shadow-inner border border-gray-100">
-              <img src={sessionData.qrImage} alt="Large QR Code" className="w-full h-full object-contain" />
+              <img src={sessionData.qr_image_path} alt="Large QR Code" className="w-full h-full object-contain" />
             </div>
 
             <div className="w-full text-center mb-8">
                 <a 
-                  href={sessionData.qrLink} 
+                  href={sessionData.qr_link} 
                   target="_blank" 
                   rel="noreferrer"
                   className={`block text-[16px] font-bold underline truncate px-2 ${isHorror ? 'text-[#FFFFFF] hover:text-[#2E9AD7]' : isLove ? 'text-[#F43F5E] hover:text-[#9D174D]' : 'text-[#2E9AD7] hover:text-[#1D2B39]'} transition-colors`}
                 >
-                  {sessionData.qrLink}
+                  {sessionData.qr_link}
                 </a>
             </div>
 
