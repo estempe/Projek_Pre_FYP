@@ -7,10 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class GameSession extends Model
 {
-    protected  $table = 'game_sessions';
-    
-}
     use HasFactory;
+
+    protected $table = 'game_sessions';
 
     protected $fillable = [
         'name',
@@ -23,4 +22,9 @@ class GameSession extends Model
         'qr_image_path',
         'status',
     ];
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class, 'game_session_id');
+    }
 }

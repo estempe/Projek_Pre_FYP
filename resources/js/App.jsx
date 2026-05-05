@@ -25,19 +25,20 @@ import SessionRedeem from "./pages/pic/SessionRedeem";
 import LoginSuperadmin from "./pages/superadmin/LoginSuperadmin";
 import HomeSuperadmin from "./pages/superadmin/HomeSuperadmin";
 import CreateSession from "./pages/superadmin/CreateSession";
+import SessionDetailSuperadmin from "./pages/superadmin/SessionDetailSuperadmin"; // <-- Import Tambahan Baru
 import WaitingRoomSuperadmin from "./pages/superadmin/WaitingRoom";
 import SessionLiveSuperadmin from "./pages/superadmin/SessionLive";
 import LeaderboardSuperadmin from "./pages/superadmin/LeaderboardSuperadmin";
 import SessionRedeemSuperadmin from "./pages/superadmin/SessionRedeem";
+import EditSessionSuperadmin from './pages/superadmin/EditSessionSuperadmin';
+
 
 export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Ini artinya: Kalau URL-nya "/", buka halaman JoinSession */}
+        {/* Mahasiswa */}
         <Route path="/" element={<JoinSession />} />
-        
-        {/* Sisanya menyesuaikan path masing-masing */}
         <Route path="/create-team" element={<CreateTeam />} />
         <Route path="/waiting" element={<WaitingRoom />} />
         <Route path="/gameplay" element={<MainGameplay />} />
@@ -47,23 +48,24 @@ export default function App() {
         <Route path="/result" element={<GameResult />} />
         <Route path="/redeem-success" element={<RedeemSuccess />} />
 
-
         {/* PIC */}
         <Route path="/pic/login" element={<LoginPIC />} />
         <Route path="/pic/home" element={<ProtectedRoute><HomePIC /></ProtectedRoute>} />
-        <Route path="/pic/session-detail" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
-        <Route path="/pic/session-live" element={<ProtectedRoute><SessionLive /></ProtectedRoute>} />
-        <Route path="/pic/leaderboard" element={<ProtectedRoute><LeaderboardPIC /></ProtectedRoute>} />
-        <Route path="/pic/session-redeem" element={<ProtectedRoute><SessionRedeem /></ProtectedRoute>} />
+        <Route path="/pic/session-detail/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
+        <Route path="/pic/session-live/:id" element={<ProtectedRoute><SessionLive /></ProtectedRoute>} />
+        <Route path="/pic/leaderboard/:id" element={<ProtectedRoute><LeaderboardPIC /></ProtectedRoute>} />
+        <Route path="/pic/session-redeem/:id" element={<ProtectedRoute><SessionRedeem /></ProtectedRoute>} />
 
         {/* SuperAdmin */}
         <Route path="/superadmin/login" element={<LoginSuperadmin />} />
         <Route path="/superadmin/home" element={<ProtectedRoute><HomeSuperadmin /></ProtectedRoute>} />
         <Route path="/superadmin/create-session" element={<ProtectedRoute><CreateSession /></ProtectedRoute>} />
+        <Route path="/superadmin/session/detail/:id" element={<ProtectedRoute><SessionDetailSuperadmin /></ProtectedRoute>} />        
         <Route path="/superadmin/waiting/:id" element={<ProtectedRoute><WaitingRoomSuperadmin /></ProtectedRoute>} />
-        <Route path="/superadmin/session/live" element={<ProtectedRoute><SessionLiveSuperadmin /></ProtectedRoute>} />
-        <Route path="/superadmin/leaderboard" element={<ProtectedRoute><LeaderboardSuperadmin /></ProtectedRoute>} />
-        <Route path="/superadmin/session/redeem" element={<ProtectedRoute><SessionRedeemSuperadmin /></ProtectedRoute>} />
+        <Route path="/superadmin/session/live/:id" element={<ProtectedRoute><SessionLiveSuperadmin /></ProtectedRoute>} />
+        <Route path="/superadmin/leaderboard/:id" element={<ProtectedRoute><LeaderboardSuperadmin /></ProtectedRoute>} />
+        <Route path="/superadmin/session/redeem/:id" element={<ProtectedRoute><SessionRedeemSuperadmin /></ProtectedRoute>} />
+        <Route path="/superadmin/session/edit/:id" element={<EditSessionSuperadmin />} />
       </Routes>
     </Router>
   );

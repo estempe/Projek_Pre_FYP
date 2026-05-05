@@ -1,113 +1,132 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
-// DATA MASIH DUMMY, NANTI GANTI PAKAI API AJA
 export default function HomePIC() {
+  const navigate = useNavigate();
+  const [sessions, setSessions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Format tanggal untuk tampilan UI
+  const formatTanggal = (dateString) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+  };
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const response = await fetch('/api/sessions', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          setSessions(result.data);
+        }
+      } catch (error) {
+        console.error("Gagal mengambil data sesi:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSessions();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    navigate('/pic/login');
+  };
+
+  // Pisahkan sesi berdasarkan status
+  const liveSessions = sessions.filter(s => s.status === 'live');
+  const upcomingSessions = sessions.filter(s => s.status === 'upcoming');
+
   return (
-    <div className="min-h-screen bg-[#EBF2F8] font-sans flex justify-center">
-      {/* Wrapper ukuran Mobile (max-w-md) agar posisinya di tengah layar saat dibuka di Web */}
-      <div className="w-full max-w-md bg-[#EBF2F8] min-h-screen flex flex-col relative px-6 pt-16 pb-10">
+    <div className="min-h-screen bg-[#EBF2F8] font-sans flex justify-center pb-20">
+      <div className="w-full max-w-md bg-[#EBF2F8] min-h-screen flex flex-col relative px-6 pt-12">
         
         {/* --- HEADER --- */}
-        <h1 className="text-[32px] font-bold text-[#1D2B39] mb-10">
-          Halo, Seany
-        </h1>
-
-        {/* ================================================== */}
-        {/* SECTION 1: SESI YANG SEDANG BERJALAN             */}
-        {/* ================================================== */}
-        <div className="mb-10">
-          {/* Judul Section */}
-          <h2 className="text-[16px] font-bold text-[#1D2B39] flex items-center gap-2 mb-4">
-            <span>⏳</span> Sesi yang sedang berjalan
-          </h2>
-
-          {/* CARD ONGOING */}
-          <div className="bg-white rounded-[24px] p-5 shadow-sm border border-white">
-            
-            {/* Header Card (Judul & Waktu) */}
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-[#92A0AD] font-medium text-[16px] leading-tight w-[60%]">
-                PRE FYP B30 -<br />BATCH 1
-              </h3>
-              <div className="text-right">
-                <p className="text-[#92A0AD] text-[12px] mb-0.5">Waktu Tersisa</p>
-                <p className="text-[#1D2B39] text-[20px] font-bold leading-none tracking-wide">
-                  01:34:00
-                </p>
-              </div>
-            </div>
-
-            {/* Kotak Kode Sesi */}
-            <div className="border border-[#E4E9EF] rounded-[16px] py-3 flex flex-col items-center justify-center mb-4">
-              <p className="text-[#92A0AD] text-[12px] mb-1">Kode Sesi</p>
-              <p className="text-[#1D2B39] text-[22px] font-bold leading-none tracking-widest">
-                306523
-              </p>
-            </div>
-
-            {/* TOMBOL GELAP (3D Solid Shadow) */}
-            <button className="w-full bg-[#202E3C] text-white font-bold text-[16px] py-3.5 rounded-[14px] border-2 border-[#16212C] shadow-[0_5px_0_0_#101820] hover:bg-[#2a3c4e] active:shadow-[0_0px_0_0_#101820] active:translate-y-[5px] transition-all">
-              Buka Sesi
-            </button>
+        <div className="flex justify-between items-center mb-10">
+          <div>
+            <h1 className="text-[24px] font-bold text-[#1D2B39] leading-tight">Halo,</h1>
+            <h2 className="text-[28px] font-bold text-[#2E9AD7] leading-tight">Kakak PIC! 👋</h2>
           </div>
+          <button 
+            onClick={handleLogout}
+            className="bg-white border border-[#CBD5E1] text-[#E53E3E] font-bold text-[12px] px-4 py-2 rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
+          >
+            Keluar
+          </button>
         </div>
 
-
-        {/* ================================================== */}
-        {/* SECTION 2: SESI YANG AKAN DATANG                 */}
-        {/* ================================================== */}
-        <div>
-          {/* Judul Section */}
-          <h2 className="text-[16px] font-bold text-[#1D2B39] flex items-center gap-2 mb-4">
-            <span>⌚</span> Sesi yang akan datang
-          </h2>
-
-          <div className="flex flex-col gap-5">
-            
-            {/* CARD UPCOMING 1 */}
-            <div className="bg-white rounded-[24px] p-5 shadow-sm border border-white">
-              <div className="flex justify-between items-start mb-5">
-                <h3 className="text-[#92A0AD] font-medium text-[16px] leading-tight w-[60%]">
-                  PRE FYP B30 -<br />BATCH 1 TEST
-                </h3>
-                <div className="text-right">
-                  <p className="text-[#92A0AD] text-[12px] mb-0.5">Mulai Pada</p>
-                  <p className="text-[#1D2B39] text-[14px] font-semibold leading-tight">
-                    27 April 2026<br />
-                    <span className="text-[16px] font-bold">15:30</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* TOMBOL TERANG (3D Solid Shadow dengan Border Gelap) */}
-              <button className="w-full bg-white text-[#1D2B39] font-bold text-[16px] py-3.5 rounded-[14px] border-2 border-[#1D2B39] shadow-[0_5px_0_0_#1D2B39] hover:bg-gray-50 active:shadow-[0_0px_0_0_#1D2B39] active:translate-y-[5px] transition-all">
-                Lihat Detail Sesi
-              </button>
-            </div>
-
-            {/* CARD UPCOMING 2 */}
-            <div className="bg-white rounded-[24px] p-5 shadow-sm border border-white">
-              <div className="flex justify-between items-start mb-5">
-                <h3 className="text-[#92A0AD] font-medium text-[16px] leading-tight w-[60%]">
-                  PRE FYP B30 -<br />BATCH 2
-                </h3>
-                <div className="text-right">
-                  <p className="text-[#92A0AD] text-[12px] mb-0.5">Mulai Pada</p>
-                  <p className="text-[#1D2B39] text-[14px] font-semibold leading-tight">
-                    03 May 2026<br />
-                    <span className="text-[16px] font-bold">15:30</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* TOMBOL TERANG (3D Solid Shadow dengan Border Gelap) */}
-              <button className="w-full bg-white text-[#1D2B39] font-bold text-[16px] py-3.5 rounded-[14px] border-2 border-[#1D2B39] shadow-[0_5px_0_0_#1D2B39] hover:bg-gray-50 active:shadow-[0_0px_0_0_#1D2B39] active:translate-y-[5px] transition-all">
-                Lihat Detail Sesi
-              </button>
-            </div>
-
+        {isLoading ? (
+          <div className="flex-1 flex justify-center items-center">
+            <p className="text-[#92A0AD] font-bold">Memuat daftar sesi...</p>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* --- SECTION 1: SEDANG BERJALAN (LIVE) --- */}
+            <div className="mb-10">
+              <h3 className="text-[18px] font-bold text-[#1D2B39] mb-4">Sesi Sedang Berjalan</h3>
+              
+              {liveSessions.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {liveSessions.map(session => (
+                    <div key={session.id} className="bg-white rounded-[20px] p-5 shadow-sm border-l-4 border-l-[#E5A015]">
+                      <h4 className="text-[16px] font-bold text-[#1D2B39] mb-1 truncate">{session.name}</h4>
+                      <p className="text-[#92A0AD] text-[12px] font-medium mb-4">{formatTanggal(session.start_time)}</p>
+                      <button 
+                        onClick={() => navigate(`/pic/session-live/${session.id}`)}
+                        className="w-full bg-[#E5A015] text-white font-bold text-[14px] py-3 rounded-[12px] hover:bg-[#c98c12] transition-colors"
+                      >
+                        Masuk ke Sesi
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white border border-dashed border-[#CBD5E1] rounded-[20px] p-6 text-center">
+                  <p className="text-[#92A0AD] text-[13px] font-medium">Belum ada sesi yang dimulai.</p>
+                </div>
+              )}
+            </div>
+
+            {/* --- SECTION 2: AKAN DATANG (UPCOMING) --- */}
+            <div className="mb-8">
+              <h3 className="text-[18px] font-bold text-[#1D2B39] mb-4">Sesi Akan Datang</h3>
+              
+              {upcomingSessions.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {upcomingSessions.map(session => (
+                    <div key={session.id} className="bg-white rounded-[20px] p-5 shadow-sm border border-[#E4E9EF]">
+                      <h4 className="text-[16px] font-bold text-[#1D2B39] mb-1 truncate">{session.name}</h4>
+                      <p className="text-[#92A0AD] text-[12px] font-medium mb-4">{formatTanggal(session.start_time)}</p>
+                      <div className="flex gap-3">
+                        {/* Tombol ke halaman Session Detail PIC */}
+                        <button 
+                          onClick={() => navigate(`/pic/session-detail/${session.id}`)}
+                          className="flex-1 bg-white border-2 border-[#1D2B39] text-[#1D2B39] font-bold text-[13px] py-2.5 rounded-[10px] hover:bg-gray-50 transition-colors"
+                        >
+                          Lihat Detail Sesi
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white border border-dashed border-[#CBD5E1] rounded-[20px] p-6 text-center">
+                  <p className="text-[#92A0AD] text-[13px] font-medium">Belum ada sesi yang dijadwalkan.</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
       </div>
     </div>
