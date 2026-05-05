@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sessions', [GameSessionController::class, 'index']);
     Route::post('/sessions', [GameSessionController::class, 'store']);
     Route::get('/sessions/{id}', [GameSessionController::class, 'show']);
+    Route::put('/sessions/{id}', [App\Http\Controllers\Api\GameSessionController::class, 'update']);
     Route::post('/sessions/{id}/start', [GameSessionController::class, 'start']);
     Route::post('/sessions/{id}/end', [GameSessionController::class, 'endSession']);
     
@@ -33,4 +34,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rute Delete Team (Kick)
     Route::delete('/teams/{id}', [TeamController::class, 'destroy']);
+    
 });

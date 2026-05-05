@@ -30,6 +30,8 @@ import WaitingRoomSuperadmin from "./pages/superadmin/WaitingRoom";
 import SessionLiveSuperadmin from "./pages/superadmin/SessionLive";
 import LeaderboardSuperadmin from "./pages/superadmin/LeaderboardSuperadmin";
 import SessionRedeemSuperadmin from "./pages/superadmin/SessionRedeem";
+import EditSessionSuperadmin from './pages/superadmin/EditSessionSuperadmin';
+
 
 export default function App() {
   return (
@@ -63,6 +65,7 @@ export default function App() {
         <Route path="/superadmin/session/live/:id" element={<ProtectedRoute><SessionLiveSuperadmin /></ProtectedRoute>} />
         <Route path="/superadmin/leaderboard/:id" element={<ProtectedRoute><LeaderboardSuperadmin /></ProtectedRoute>} />
         <Route path="/superadmin/session/redeem/:id" element={<ProtectedRoute><SessionRedeemSuperadmin /></ProtectedRoute>} />
+        <Route path="/superadmin/session/edit/:id" element={<EditSessionSuperadmin />} />
       </Routes>
     </Router>
   );

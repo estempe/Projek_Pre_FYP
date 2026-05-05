@@ -95,6 +95,7 @@ class GameSessionController extends Controller
         return response()->json(['success' => true, 'data' => $session], 200);
     }
 
+    
     // Fungsi untuk memulai sesi
     public function start($id)
     {
@@ -259,6 +260,41 @@ class GameSessionController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Koin berhasil ditukar!']);
     }
+    // --- TAMBAHKAN FUNGSI UPDATE INI ---
+    public function update(Request $request, $id)
+    {
+        $session = GameSession::find($id);
+        if (!$session) {
+            return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
+        }
+
+        // 1. Update data utama Sesi
+        $session->update([
+            'name'            => $request->name,
+            'duration'        => $request->duration,
+            'redeem_name'     => $request->redeem_name,
+            'redeem_location' => $request->redeem_location,
+        ]);
+
+        // 2. Update Pos (Logika paling aman: hapus lama, buat baru)
+        if ($request->has('posts')) {
+            $session->posts()->delete(); // Hapus semua pos lama terkait sesi ini
+            foreach ($request->posts as $post) {
+                Post::create([
+                    'game_session_id' => $session->id,
+                    'name'            => $post['name'],
+                    'location'        => $post['location'],
+                    'max_duration'    => $post['max_duration'] ?? '00:00',
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true, 
+            'message' => 'Sesi berhasil diperbarui!',
+            'data'    => $session->load('posts')
+        ]);
+    }
 
     // Fungsi untuk mengakhiri sesi
     public function endSession($id)
@@ -274,3 +310,4 @@ class GameSessionController extends Controller
         return response()->json(['success' => true, 'message' => 'Sesi resmi ditutup!']);
     }
 }
+    

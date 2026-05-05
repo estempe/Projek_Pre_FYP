@@ -118,12 +118,23 @@ export default function HomeSuperadmin() {
                             </p>
                           </div>
                         </div>
-                        {/* PASTIKAN URL MEMBAWA ID! */}
-                        <Link to={`/superadmin/waiting/${session.id}`} className="block w-full">
-                          <button className="w-full bg-white text-[#1D2B39] font-bold text-[16px] py-3.5 rounded-[14px] border-2 border-[#1D2B39] shadow-[0_5px_0_0_#1D2B39] hover:bg-gray-50 active:shadow-[0_0px_0_0_#1D2B39] active:translate-y-[5px] transition-all">
-                            Lihat Detail Sesi
-                          </button>
-                        </Link>
+
+                        {/* DUA TOMBOL AKSI */}
+                        <div className="flex flex-col gap-3">
+                          {/* Tombol ke Waiting Room (Operasional) */}
+                          <Link to={`/superadmin/waiting/${session.id}`} className="block w-full">
+                            <button className="w-full bg-[#202E3C] text-white font-bold text-[15px] py-3.5 rounded-[14px] border-2 border-[#16212C] shadow-[0_5px_0_0_#101820] hover:bg-[#2a3c4e] active:shadow-none active:translate-y-[5px] transition-all">
+                              Buka Waiting Room
+                            </button>
+                          </Link>
+                          
+                          {/* Tombol ke Detail/Edit (Manajemen) */}
+                          <Link to={`/superadmin/session/detail/${session.id}`} className="block w-full">
+                            <button className="w-full bg-white text-[#1D2B39] font-bold text-[15px] py-3 rounded-[14px] border-2 border-[#CBD5E1] hover:bg-gray-50 transition-all">
+                              Detail & Edit Sesi
+                            </button>
+                          </Link>
+                        </div>
                       </div>
                     );
                   })
