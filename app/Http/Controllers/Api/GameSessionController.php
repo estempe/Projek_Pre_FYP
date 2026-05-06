@@ -6,17 +6,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\GameSession;
 use Illuminate\Support\Str;
-use App\Models\Post; // 👈 1. Ubah GamePos menjadi Post
-
+use App\Models\Post; 
+use Illuminate\Support\Facades\Storage; 
 
 class GameSessionController extends Controller
 {
-    // Fungsi untuk mengambil semua daftar sesi
     public function index(Request $request)
     {
-        // Ambil semua sesi dari database, urutkan berdasarkan waktu mulai terdekat
         $sessions = GameSession::orderBy('start_time', 'asc')->get();
-
         return response()->json([
             'success' => true,
             'message' => 'Berhasil mengambil daftar sesi',
@@ -26,7 +23,6 @@ class GameSessionController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Validasi input
         $request->validate([
             'name'            => 'required|string|max:255',
             'start_time'      => 'required|date',
@@ -34,19 +30,16 @@ class GameSessionController extends Controller
             'redeem_name'     => 'required|string',
             'redeem_location' => 'required|string',
             'qr_link'         => 'nullable|string',
-            'qr_image'        => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'qr_image'        => 'nullable|image|mimes:jpeg,png,jpg|max:2048', 
         ]);
 
         $kodeSesi = strtoupper(Str::random(6));
 
-        // 2. Logika Upload Gambar
         $imagePath = null;
         if ($request->hasFile('qr_image')) {
-            // Menyimpan gambar ke folder storage/app/public/qr_codes
-            $imagePath = $request->file('qr_image')->store('qr_codes', 'public');
+            $imagePath = $request->file('qr_image')->store('qr_images', 'public'); 
         }
 
-        // 3. Simpan ke database (Sesi)
         $session = GameSession::create([
             'session_code'    => $kodeSesi,
             'name'            => $request->name,
@@ -55,61 +48,40 @@ class GameSessionController extends Controller
             'redeem_name'     => $request->redeem_name,
             'redeem_location' => $request->redeem_location,
             'qr_link'         => $request->qr_link,
-            'qr_image_path'   => $imagePath,
-            'status'          => 'upcoming', // Status awal
+            'qr_image_path'   => $imagePath, 
+            'status'          => 'upcoming', 
         ]);
 
-        // --- LOGIKA MENYIMPAN DAFTAR POS ---
         if ($request->pos_list) {
-            // Ubah teks JSON dari React menjadi Array PHP
             $posArray = json_decode($request->pos_list, true);
-
             if (is_array($posArray)) {
                 foreach ($posArray as $posItem) {
-                    Post::create([ // 👈 2. Gunakan Model Post
+                    Post::create([ 
                         'game_session_id' => $session->id, 
                         'name'            => $posItem['name'] ?: 'Pos Default', 
                         'location'        => $posItem['location'] ?: 'Belum diatur',
-                        'max_duration'    => $posItem['duration'] ?: '00:00', // 👈 3. Ubah nama kolom jadi max_duration
+                        'max_duration'    => $posItem['duration'] ?: '00:00',
                     ]);
                 }
             }
         }
         
-        return response()->json([
-            'success' => true,
-            'message' => 'Sesi berhasil dibuat!',
-            'data'    => $session
-        ], 201);
+        return response()->json(['success' => true, 'message' => 'Sesi berhasil dibuat!', 'data' => $session], 201);
     }
 
-    // Fungsi menampilkan detail sesi beserta daftar pos-nya
     public function show($id)
     {
-        // Gunakan with('posts') untuk memanggil relasi yang baru kita buat
         $session = GameSession::with('posts')->find($id);
-        
-        if (!$session) {
-            return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
-        }
+        if (!$session) return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
         return response()->json(['success' => true, 'data' => $session], 200);
     }
 
-    
-    // Fungsi untuk memulai sesi
     public function start($id)
     {
         $session = GameSession::find($id);
-        if (!$session) {
-            return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
-        }
+        if (!$session) return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
+        if ($session->status === 'live') return response()->json(['success' => true, 'message' => 'Sesi sudah berjalan!'], 200);
 
-        // KUNCI PENGAMAN: Jika sudah live, jangan reset waktu mulainya!
-        if ($session->status === 'live') {
-            return response()->json(['success' => true, 'message' => 'Sesi sudah berjalan, langsung dialihkan!'], 200);
-        }
-
-        // Set waktu mulai HANYA 1 KALI saat pertama kali tombol ditekan
         $session->start_time = now();
         $session->status = 'live';
         $session->save();
@@ -117,17 +89,11 @@ class GameSessionController extends Controller
         return response()->json(['success' => true, 'message' => 'Sesi dimulai!'], 200);
     }
 
-    // --- FUNGSI UNTUK HALAMAN SESSION LIVE ---
-
-    // 1. Mengambil data Sesi, Pos, dan Tim secara bersamaan
     public function getLiveData($id)
     {
         $session = GameSession::with('posts')->find($id);
-        if (!$session) {
-            return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
-        }
+        if (!$session) return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
 
-        // --- HITUNG SISA WAKTU SECARA ABSOLUT ---
         $remainingSeconds = 0;
         if ($session->start_time && $session->status === 'live') {
             $durationParts = explode(':', $session->duration);
@@ -136,31 +102,24 @@ class GameSessionController extends Controller
             $seconds = isset($durationParts[2]) ? (int)$durationParts[2] : 0;
             
             $totalDurationSec = ($hours * 3600) + ($minutes * 60) + $seconds;
-            
-            // Hitung selisih waktu pakai native PHP
             $waktuMulai = strtotime($session->start_time);
             $waktuSekarang = time();
-            
-            $elapsedSec = $waktuSekarang - $waktuMulai;
-            
-            // Cegah angka negatif jika terjadi pergeseran server sedetik
-            if ($elapsedSec < 0) {
-                $elapsedSec = 0;
-            }
-            
+            $elapsedSec = max(0, $waktuSekarang - $waktuMulai);
             $remainingSeconds = (int) ceil(max(0, $totalDurationSec - $elapsedSec));
         }
-        // Ambil data tim & poin
+
         $teams = \App\Models\Team::where('game_session_id', $id)->get();
         $teamPosts = \App\Models\TeamPost::whereIn('team_id', $teams->pluck('id'))->get();
+        $postDurations = $session->posts->pluck('max_duration', 'id');
 
-        $formattedTeams = $teams->map(function($team) use ($teamPosts) {
+        $formattedTeams = $teams->map(function($team) use ($teamPosts, $postDurations) {
             $posStatus = [];
             foreach($teamPosts->where('team_id', $team->id) as $tp) {
                 $posStatus[$tp->post_id] = [
-                    'state'       => $tp->status,
-                    'earnedCoins' => $tp->earned_coins,
-                    'countdown'   => '00:00'
+                    'status'        => $tp->status, 
+                    'earnedCoins'   => $tp->earned_coins,
+                    'check_in_time' => $tp->check_in_time ? \Carbon\Carbon::parse($tp->check_in_time)->format('Y-m-d H:i:s') : null,
+                    'max_duration'  => $postDurations[$tp->post_id] ?? '00:00:00'
                 ];
             }
             return [
@@ -172,33 +131,27 @@ class GameSessionController extends Controller
             ];
         });
 
-        return response()->json([
-            'success'           => true,
-            'session'           => $session,
-            'teams'             => $formattedTeams,
-            'remaining_seconds' => $remainingSeconds // Dikirim ke React dalam wujud angka bulat
-        ]);
+        return response()->json(['success' => true, 'session' => $session, 'teams' => $formattedTeams, 'remaining_seconds' => $remainingSeconds]);
     }
 
-    // 2. Fungsi saat Superadmin / PIC menekan tombol "Selesai" dan memberi koin
+    public function checkInPos(Request $request, $id)
+    {
+        $request->validate(['team_id' => 'required', 'post_id' => 'required']);
+        $teamPost = \App\Models\TeamPost::firstOrNew(['team_id' => $request->team_id, 'post_id' => $request->post_id]);
+        $teamPost->status = 'active';
+        $teamPost->check_in_time = now(); 
+        $teamPost->save();
+        return response()->json(['success' => true, 'message' => 'Check in berhasil!']);
+    }
+
     public function finishPos(Request $request, $id)
     {
-        $request->validate([
-            'team_id' => 'required',
-            'post_id' => 'required',
-            'coins'   => 'required|numeric'
-        ]);
-
-        // Tambah koin ke total koin Tim
+        $request->validate(['team_id' => 'required', 'post_id' => 'required', 'coins' => 'required|numeric']);
         $team = \App\Models\Team::find($request->team_id);
         $team->total_coins += $request->coins;
         $team->save();
 
-        // Catat di Riwayat Pos Tim
-        $teamPost = \App\Models\TeamPost::firstOrNew([
-            'team_id' => $request->team_id,
-            'post_id' => $request->post_id
-        ]);
+        $teamPost = \App\Models\TeamPost::firstOrNew(['team_id' => $request->team_id, 'post_id' => $request->post_id]);
         $teamPost->status = 'completed';
         $teamPost->earned_coins = $request->coins;
         $teamPost->save();
@@ -206,17 +159,11 @@ class GameSessionController extends Controller
         return response()->json(['success' => true, 'message' => 'Nilai berhasil disimpan!']);
     }
 
-    // --- FUNGSI UNTUK LEADERBOARD & REDEEM ---
-
-    // Mengambil klasemen tim
-    // Mengambil klasemen tim
     public function getLeaderboard($id)
     {
-        // Hitung poin asli (sisa koin + yang sudah diredeem) secara dinamis
         $teams = \App\Models\Team::where('game_session_id', $id)
                     ->selectRaw('teams.*, (total_coins + redeemed_amount) as all_time_score')
-                    ->orderBy('all_time_score', 'desc') // Urutkan berdasarkan poin asli tertinggi
-                    ->get();
+                    ->orderBy('all_time_score', 'desc')->get();
 
         $leaderboard = $teams->map(function($team, $index) {
             return [
@@ -224,8 +171,8 @@ class GameSessionController extends Controller
                 'rank'           => $index + 1,
                 'name'           => $team->name,
                 'major'          => $team->major,
-                'score'          => (int) $team->all_time_score, // Tampil di Leaderboard (Poin Utuh)
-                'balance'        => (int) $team->total_coins,    // Tampil di Kasir Redeem (Sisa Saldo)
+                'score'          => (int) $team->all_time_score, 
+                'balance'        => (int) $team->total_coins,   
                 'isRedeemed'     => (bool) $team->is_redeemed,
                 'redeemedAmount' => (int) $team->redeemed_amount
             ];
@@ -234,25 +181,13 @@ class GameSessionController extends Controller
         return response()->json(['success' => true, 'data' => $leaderboard]);
     }
 
-    // Fungsi memotong koin saat tim menukar hadiah
     public function redeemCoins(Request $request, $id)
     {
-        $request->validate([
-            'team_id' => 'required',
-            'amount'  => 'required|numeric|min:1'
-        ]);
-
+        $request->validate(['team_id' => 'required', 'amount' => 'required|numeric|min:1']);
         $team = \App\Models\Team::where('game_session_id', $id)->where('id', $request->team_id)->first();
-        if (!$team) {
-            return response()->json(['success' => false, 'message' => 'Tim tidak ditemukan'], 404);
-        }
+        if (!$team) return response()->json(['success' => false, 'message' => 'Tim tidak ditemukan'], 404);
+        if ($team->total_coins < $request->amount) return response()->json(['success' => false, 'message' => 'Koin tim tidak mencukupi!'], 400);
 
-        // Cek apakah koin cukup
-        if ($team->total_coins < $request->amount) {
-            return response()->json(['success' => false, 'message' => 'Koin tim tidak mencukupi!'], 400);
-        }
-
-        // Proses potong koin dan ubah status
         $team->total_coins -= $request->amount;
         $team->redeemed_amount += $request->amount;
         $team->is_redeemed = true;
@@ -260,54 +195,88 @@ class GameSessionController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Koin berhasil ditukar!']);
     }
-    // --- TAMBAHKAN FUNGSI UPDATE INI ---
+
     public function update(Request $request, $id)
     {
         $session = GameSession::find($id);
-        if (!$session) {
-            return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
-        }
+        if (!$session) return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
 
-        // 1. Update data utama Sesi
-        $session->update([
-            'name'            => $request->name,
-            'duration'        => $request->duration,
-            'redeem_name'     => $request->redeem_name,
-            'redeem_location' => $request->redeem_location,
+        $validatedData = $request->validate([
+            'name'            => 'required|string',
+            'duration'        => 'required|string',
+            'redeem_name'     => 'required|string',
+            'redeem_location' => 'required|string',
+            'qr_link'         => 'nullable|string',
+            'qr_image'        => 'nullable|image|mimes:jpeg,png,jpg,svg|max:2048', 
+            'posts'           => 'nullable|array',
+            'posts.*.id'      => 'nullable|integer',
+            'posts.*.name'    => 'required_with:posts|string',
+            'posts.*.location'=> 'required_with:posts|string',
         ]);
 
-        // 2. Update Pos (Logika paling aman: hapus lama, buat baru)
-        if ($request->has('posts')) {
-            $session->posts()->delete(); // Hapus semua pos lama terkait sesi ini
-            foreach ($request->posts as $post) {
-                Post::create([
-                    'game_session_id' => $session->id,
-                    'name'            => $post['name'],
-                    'location'        => $post['location'],
-                    'max_duration'    => $post['max_duration'] ?? '00:00',
-                ]);
+        $updateData = collect($validatedData)->except(['qr_image', 'posts'])->toArray();
+
+        if ($request->hasFile('qr_image')) {
+            if ($session->qr_image_path && Storage::disk('public')->exists($session->qr_image_path)) {
+                Storage::disk('public')->delete($session->qr_image_path);
             }
+            $path = $request->file('qr_image')->store('qr_images', 'public');
+            $updateData['qr_image_path'] = $path;
         }
 
-        return response()->json([
-            'success' => true, 
-            'message' => 'Sesi berhasil diperbarui!',
-            'data'    => $session->load('posts')
-        ]);
+        $session->update($updateData);
+
+        if ($request->has('posts')) {
+            $existingPostIds = $session->posts()->pluck('id')->toArray();
+            $submittedPostIds = []; 
+
+            foreach ($request->posts as $postData) {
+                if (isset($postData['id'])) {
+                    $post = $session->posts()->find($postData['id']);
+                    if ($post) {
+                        $post->update(['name' => $postData['name'], 'location' => $postData['location']]);
+                        $submittedPostIds[] = $post->id;
+                    }
+                } else {
+                    $newPost = $session->posts()->create(['name' => $postData['name'], 'location' => $postData['location']]);
+                    $submittedPostIds[] = $newPost->id;
+                }
+            }
+            $postsToDelete = array_diff($existingPostIds, $submittedPostIds);
+            if (!empty($postsToDelete)) {
+                $session->posts()->whereIn('id', $postsToDelete)->delete();
+            }
+        } else {
+            $session->posts()->delete();
+        }
+
+        return response()->json(['success' => true, 'message' => 'Detail sesi dan pos diperbarui!', 'data' => $session]);
+    }
+    
+    public function endSession($id)
+    {
+        $session = GameSession::find($id);
+        if (!$session) return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
+        $session->status = 'ended';
+        $session->save();
+        return response()->json(['success' => true, 'message' => 'Sesi resmi ditutup!']);
     }
 
-    // Fungsi untuk mengakhiri sesi
-    public function endSession($id)
+    // --- FUNGSI BARU: HAPUS SESI ---
+    public function destroySession($id)
     {
         $session = GameSession::find($id);
         if (!$session) {
             return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
         }
 
-        $session->status = 'ended';
-        $session->save();
+        // Hapus gambar QR dari storage jika ada
+        if ($session->qr_image_path && Storage::disk('public')->exists($session->qr_image_path)) {
+            Storage::disk('public')->delete($session->qr_image_path);
+        }
 
-        return response()->json(['success' => true, 'message' => 'Sesi resmi ditutup!']);
+        $session->delete();
+
+        return response()->json(['success' => true, 'message' => 'Sesi berhasil dihapus!']);
     }
 }
-    

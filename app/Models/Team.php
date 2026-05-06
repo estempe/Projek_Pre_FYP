@@ -7,5 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class Team extends Model
 {
-    //
+    use HasFactory;
+
+    // Mengizinkan Laravel untuk mengisi kolom-kolom ini
+    protected $fillable = [
+        'game_session_id',
+        'name',
+        'major',
+        'total_coins',
+        'is_redeemed',
+        'redeemed_amount',
+        'emergency_code'
+    ];
 }

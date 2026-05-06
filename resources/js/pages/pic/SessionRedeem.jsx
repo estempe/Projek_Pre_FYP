@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 
-// --- IMPORT ASSETS ---
 import BackArrowDark from '../../assets/Back-Arrow-Icon-Dark.svg';
 import CoinIcon from '../../assets/Coin3D.png';
 import HomeIcon from '../../assets/Home-Icon.svg';
 import TrophyIcon from '../../assets/Trophy-Icon.svg';
 
-const RedeemCardPIC = ({ team, onTukarClick }) => {
+const RedeemCardPIC = ({ team, sessionStatus, onTukarClick }) => {
   return (
     <div className="bg-white rounded-[20px] p-5 shadow-sm border border-white flex flex-col mb-4 relative z-10">
       <div className="mb-4">
@@ -28,6 +27,8 @@ const RedeemCardPIC = ({ team, onTukarClick }) => {
             </div>
           ) : null}
         </div>
+        
+        {/* LOGIKA BARU: Tombol Redeem HANYA mati kalau sudah ditukar. */}
         {team.isRedeemed ? (
           <button disabled className="bg-[#b1b8c0] text-white font-bold text-[11px] px-4 py-2.5 rounded-lg cursor-not-allowed">
             Sudah Ditukar
@@ -45,12 +46,12 @@ const RedeemCardPIC = ({ team, onTukarClick }) => {
   );
 };
 
-
-export default function SessionRedeemPIC() {
+export default function SessionRedeem() {
   const { id } = useParams();
   const navigate = useNavigate();
   
   const [sessionName, setSessionName] = useState('Memuat Sesi...');
+  const [sessionStatus, setSessionStatus] = useState(''); 
   const [teamsData, setTeamsData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -71,14 +72,21 @@ export default function SessionRedeemPIC() {
       const dataLeaderboard = await resLeaderboard.json();
       const dataSession = await resSession.json();
 
-      if (resLeaderboard.ok && dataLeaderboard.success) setTeamsData(dataLeaderboard.data);
-      if (resSession.ok && dataSession.success) setSessionName(dataSession.data.name);
+      if (resLeaderboard.ok && dataLeaderboard.success) {
+        setTeamsData(dataLeaderboard.data);
+      }
+      if (resSession.ok && dataSession.success) {
+        setSessionName(dataSession.data.name);
+        setSessionStatus(dataSession.data.status); 
+      }
     } catch (error) {
       console.error("Gagal mengambil data:", error);
     }
   };
 
-  useEffect(() => { fetchData(); }, [id]);
+  useEffect(() => {
+    fetchData();
+  }, [id]);
 
   const handleTukarClick = (team) => {
     setSelectedTeam(team);
@@ -115,7 +123,9 @@ export default function SessionRedeemPIC() {
     setRedeemInput('');
   };
 
-  const filteredTeams = teamsData.filter(team => team.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredTeams = teamsData.filter(team => 
+    team.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-[#EBF2F8] font-sans flex justify-center pb-32">
@@ -123,27 +133,40 @@ export default function SessionRedeemPIC() {
         
         <div className="flex justify-between items-center mb-8 relative z-10">
           <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
-            <img src={BackArrowDark} alt="Kembali" className="w-5 h-5" /> Kembali
+            <img src={BackArrowDark} alt="Kembali" className="w-5 h-5" />
+            Kembali ke Leaderboard
           </button>
-          {/* Tombol Akhiri Sesi dihapus untuk PIC */}
         </div>
 
-        <h2 className="text-[14px] font-bold text-[#1D2B39] mb-8 leading-tight relative z-10">{sessionName}</h2>
-        <h1 className="text-[36px] font-bold text-[#1D2B39] text-center mb-10 leading-none tracking-tight relative z-10">Redeem</h1>
+        <h2 className="text-[14px] font-bold text-[#1D2B39] mb-8 leading-tight relative z-10">
+          {sessionName}
+        </h2>
+
+        <h1 className="text-[36px] font-bold text-[#1D2B39] text-center mb-10 leading-none tracking-tight relative z-10">
+          Kasir Redeem
+        </h1>
 
         <div className="mb-6 relative z-10">
-          <input type="text" placeholder="Cari team..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-white border border-[#CBD5E1] rounded-[16px] py-3.5 px-5 text-[14px] text-[#1D2B39] placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] shadow-sm transition-colors" />
+          <input 
+            type="text" placeholder="Cari team..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-[#CBD5E1] rounded-[16px] py-3.5 px-5 text-[14px] text-[#1D2B39] placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] shadow-sm transition-colors"
+          />
         </div>
 
         <div className="flex flex-col">
           {filteredTeams.map((team) => (
-            <RedeemCardPIC key={team.id} team={team} onTukarClick={handleTukarClick} />
+            <RedeemCardPIC 
+              key={team.id} 
+              team={team} 
+              sessionStatus={sessionStatus} 
+              onTukarClick={handleTukarClick} 
+            />
           ))}
           {filteredTeams.length === 0 && <p className="text-center text-gray-500 mt-4">Tim tidak ditemukan.</p>}
         </div>
 
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-40">
-          <Link to="/pic/home" className="hover:scale-110 transition-transform">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-40 border border-[#F1F5F9]">
+          <Link to={`/pic/session-live/${id}`} className="hover:scale-110 transition-transform">
             <img src={HomeIcon} alt="Home" className="w-7 h-7" />
           </Link>
           <Link to={`/pic/leaderboard/${id}`} className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
@@ -156,19 +179,31 @@ export default function SessionRedeemPIC() {
             
             {modalState === 'input' && selectedTeam && (
               <div className="w-full max-w-[340px] bg-white rounded-[24px] p-6 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] flex flex-col items-center text-center animate-fade-in-up">
-                <h2 className="text-[18px] font-bold text-[#1D2B39] mb-6 leading-relaxed">Kurangkan BeeCoin<br />({selectedTeam.name})</h2>
-                <input type="number" placeholder="Jumlah koin yang ditukar..." value={redeemInput} onChange={(e) => setRedeemInput(e.target.value)} className="w-full border border-[#CBD5E1] rounded-[14px] py-3.5 px-4 text-center text-[15px] text-[#1D2B39] font-medium placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] mb-6" />
-                <button onClick={handleProsesTukar} className="w-full bg-[#2E9AD7] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#2e84b6] shadow-[0_4px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[4px] transition-all mb-3">Tukarkan</button>
-                <button onClick={closeModal} className="w-full bg-white text-[#1D2B39] font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#1D2B39] hover:bg-gray-50 transition-all">Batal</button>
+                <h2 className="text-[18px] font-bold text-[#1D2B39] mb-6 leading-relaxed">
+                  Tukar BeeCoin<br />({selectedTeam.name})
+                </h2>
+                <input 
+                  type="number" placeholder="Jumlah koin..." value={redeemInput} onChange={(e) => setRedeemInput(e.target.value)}
+                  className="w-full border border-[#CBD5E1] rounded-[14px] py-3.5 px-4 text-center text-[15px] text-[#1D2B39] font-medium placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] mb-6"
+                />
+                <button onClick={handleProsesTukar} className="w-full bg-[#2E9AD7] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#2e84b6] shadow-[0_4px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[4px] transition-all mb-3">
+                  Proses Penukaran
+                </button>
+                <button onClick={closeModal} className="w-full bg-white text-[#1D2B39] font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#1D2B39] hover:bg-gray-50 transition-all">
+                  Batal
+                </button>
               </div>
             )}
 
             {modalState === 'success' && (
               <div className="w-full max-w-[340px] bg-white rounded-[24px] p-8 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] flex flex-col items-center text-center animate-fade-in-up">
                 <h2 className="text-[18px] font-bold text-[#1D2B39] mb-8">Penukaran Berhasil!</h2>
-                <button onClick={closeModal} className="w-full bg-[#2E9AD7] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#2e84b6] shadow-[0_4px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[4px] transition-all">Oke, Lanjut</button>
+                <button onClick={closeModal} className="w-full bg-[#2E9AD7] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#2e84b6] shadow-[0_4px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[4px] transition-all">
+                  Oke, Lanjut
+                </button>
               </div>
             )}
+
           </div>
         )}
 

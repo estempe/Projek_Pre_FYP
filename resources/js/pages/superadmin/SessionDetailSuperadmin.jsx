@@ -53,7 +53,6 @@ export default function SessionDetailSuperadmin() {
     <div className="min-h-screen bg-[#EBF2F8] font-sans flex justify-center pb-32">
       <div className="w-full max-w-md bg-[#EBF2F8] min-h-screen flex flex-col px-6 pt-12 relative">
         
-        {/* HEADER */}
         <div className="flex items-center mb-8">
           <button onClick={() => navigate('/superadmin/home')} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] absolute left-6">
             <img src={BackArrowDark} alt="Back" className="w-5 h-5" /> Beranda
@@ -62,7 +61,6 @@ export default function SessionDetailSuperadmin() {
 
         <h1 className="text-[32px] font-bold text-[#1D2B39] mb-8 mt-4">Detail Sesi</h1>
 
-        {/* INFO UTAMA */}
         <div className="bg-white border border-[#E4E9EF] rounded-[24px] p-6 shadow-sm mb-8">
             <div className="flex flex-col items-center justify-center border-b border-[#F1F5F9] pb-6 mb-6">
                 <p className="text-[#92A0AD] text-[13px] mb-1">Kode Sesi</p>
@@ -82,7 +80,8 @@ export default function SessionDetailSuperadmin() {
                     <div>
                         <p className="text-[#92A0AD] text-[12px] font-medium mb-1">Status</p>
                         <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full uppercase ${
-                            sessionData.status === 'live' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-500'
+                            sessionData.status === 'live' ? 'bg-green-100 text-green-600' : 
+                            sessionData.status === 'ended' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-500'
                         }`}>
                             {sessionData.status}
                         </span>
@@ -91,7 +90,6 @@ export default function SessionDetailSuperadmin() {
             </div>
         </div>
 
-        {/* DAFTAR POS */}
         <h2 className="text-[18px] font-bold text-[#1D2B39] mb-4">Daftar Pos Game</h2>
         <div className="flex flex-col gap-3 mb-10">
             {sessionData.posts?.map((pos, idx) => (
@@ -107,13 +105,14 @@ export default function SessionDetailSuperadmin() {
             ))}
         </div>
 
-        {/* TOMBOL AKSI */}
         <div className="flex flex-col gap-3 mb-10">
-            <Link to={`/superadmin/session/edit/${id}`}>
-                <button className="w-full bg-white text-[#1D2B39] font-bold py-4 rounded-[16px] border-2 border-[#1D2B39] hover:bg-gray-50 transition-all">
-                    ✏️ Edit Detail Sesi
-                </button>
-            </Link>
+            {sessionData.status !== 'ended' && (
+              <Link to={`/superadmin/session/edit/${id}`}>
+                  <button className="w-full bg-white text-[#1D2B39] font-bold py-4 rounded-[16px] border-2 border-[#1D2B39] hover:bg-gray-50 transition-all">
+                      ✏️ Edit Detail Sesi
+                  </button>
+              </Link>
+            )}
 
             <Link to={`/superadmin/leaderboard/${id}`}>
                 <button className="w-full bg-[#202E3C] text-white font-bold py-4 rounded-[16px] border-2 border-[#16212C] shadow-[0_5px_0_0_#101820] active:translate-y-[5px] active:shadow-none transition-all">
@@ -122,7 +121,6 @@ export default function SessionDetailSuperadmin() {
             </Link>
         </div>
 
-        {/* BOTTOM NAV */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-lg z-50">
           <Link to="/superadmin/home">
             <img src={HomeIcon} alt="Home" className="w-7 h-7" />

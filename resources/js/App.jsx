@@ -2,7 +2,6 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-// Import semua halaman yang udah kamu buat
 import JoinSession from "./pages/mahasiswa/JoinSession";
 import CreateTeam from "./pages/mahasiswa/CreateTeam";
 import WaitingRoom from "./pages/mahasiswa/WaitingRoom";

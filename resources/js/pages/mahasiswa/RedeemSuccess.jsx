@@ -1,21 +1,32 @@
 import React from 'react';
-// Nanti uncomment dan import gambar kado 3D aslimu di sini
-// import GiftIcon from '../assets/gift3D.png'; 
-
-// DATA MASIH DUMMY, NANTI GANTI PAKAI API AJA
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function RedeemSuccess() {
-  // Data ini nantinya didapat dari state/database secara realtime
-  const redeemedCoins = 200;
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Mengambil data yang dilempar dari halaman sebelumnya
+  const redeemedCoins = location.state?.redeemedCoins || 0;
+  const nameTeam = location.state?.nameTeam || "Tim Kamu";
+  const sessionCode = location.state?.sessionCode || "";
+
+  const handleKembali = () => {
+    // Kembali ke halaman Game Result jika ingin melihat QR/Skor lagi
+    navigate("/result", { state: { sessionCode, nameTeam } });
+  };
+
+  const handleTutupSesi = () => {
+    // Menghapus jejak dan kembali ke halaman utama (Mulai Baru)
+    navigate("/");
+  };
 
   return (
     <div className="min-h-screen bg-[#F0F8FF] font-sans flex flex-col items-center">
-      {/* Wrapper pembatas lebar layar */}
       <div className="w-full max-w-md min-h-screen flex flex-col relative px-6 pt-12 pb-8">
         
         {/* --- TOMBOL KEMBALI --- */}
         <button 
-          onClick={() => {/* Tambahkan navigasi kembali */}}
+          onClick={handleKembali}
           className="flex items-center gap-2 text-[#02101B] font-bold text-[15px] hover:opacity-70 transition-opacity self-start z-10"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -24,8 +35,7 @@ export default function RedeemSuccess() {
           Kembali
         </button>
 
-        {/* --- KONTEN UTAMA (Tengah Vertikal) --- */}
-        {/* flex-1 bikin kotak ini mengisi sisa ruang, jadi isinya otomatis ke tengah */}
+        {/* --- KONTEN UTAMA --- */}
         <div className="flex-1 flex flex-col items-center justify-center -mt-10">
           
           <h1 className="text-[28px] font-bold text-[#02101B] text-center leading-[1.3] mb-8">
@@ -34,29 +44,26 @@ export default function RedeemSuccess() {
 
           {/* AREA GAMBAR KADO */}
           <div className="mb-8 w-40 h-40 flex items-center justify-center">
-            {/* Ganti emoji ini dengan tag img kado aslimu */}
-            {/* <img src={GiftIcon} alt="Kado" className="w-full h-full object-contain" /> */}
-            <div className="text-[100px] leading-none drop-shadow-xl hover:scale-105 transition-transform duration-500">
+            {/* Ganti dengan <img src={GiftIcon} ... /> jika kamu sudah menyalakan import gambarnya */}
+            <div className="text-[100px] leading-none drop-shadow-xl hover:scale-110 transition-transform duration-500 animate-bounce">
               🎁
             </div>
           </div>
 
-          {/* TEKS INFO COIN */}
           <p className="text-[20px] text-[#02101B] text-center mb-5">
             Sebanyak <span className="font-bold text-[#E5A015]">{redeemedCoins} BeeCoin</span> telah ditukarkan.
           </p>
 
-          {/* TEKS UCAPAN TERIMA KASIH */}
           <p className="text-[15px] text-[#546878] text-center leading-relaxed px-4">
-            "Terima kasih sudah berjuang bersama timmu hari ini. Sampai jumpa di keseruan berikutnya!"
+            "Terima kasih <span className="font-bold">{nameTeam}</span> sudah berjuang hari ini. Sampai jumpa di keseruan berikutnya!"
           </p>
           
         </div>
 
-        {/* --- TOMBOL TUTUP SESI (Nempel di bawah) --- */}
+        {/* --- TOMBOL TUTUP SESI --- */}
         <div className="w-full pt-6 mt-auto pb-4">
           <button 
-            onClick={() => {/* Fungsi untuk reset state atau kembali ke Home */}}
+            onClick={handleTutupSesi}
             className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[6px] transition-all"
           >
             Tutup Sesi

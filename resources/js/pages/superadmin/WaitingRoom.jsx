@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import BackArrowDark from '../../assets/Back-Arrow-Icon-Dark.svg';
 
-export default function WaitingRoom() {
+export default function WaitingRoomSuperadmin() {
   const { id } = useParams(); 
   const navigate = useNavigate();
   
   const [sessionData, setSessionData] = useState(null);
-  const [teams, setTeams] = useState([]); // Sekarang state kosong, siap diisi data asli
+  const [teams, setTeams] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
 
   // Mengambil data sesi dan daftar tim secara real-time
@@ -19,7 +19,7 @@ export default function WaitingRoom() {
       const resSession = await fetch(`/api/sessions/${id}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
-      // Ambil daftar tim (kita pinjam API leaderboard karena isinya daftar tim di sesi ini)
+      // Ambil daftar tim
       const resTeams = await fetch(`/api/sessions/${id}/leaderboard`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
@@ -39,8 +39,8 @@ export default function WaitingRoom() {
 
   useEffect(() => {
     fetchData();
-    // Auto-refresh tiap 3 detik agar kelihatan jika ada tim baru masuk
-    const interval = setInterval(() => fetchData(), 3000);
+    // Auto-refresh tiap 3 detik 
+    const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, [id]);
 
@@ -58,7 +58,7 @@ export default function WaitingRoom() {
       
       const result = await response.json();
       if (response.ok && result.success) {
-        fetchData(); // Refresh daftar tim
+        fetchData(); // Langsung refresh UI setelah sukses delete
       } else {
         alert("Gagal menghapus tim: " + result.message);
       }
@@ -67,6 +67,7 @@ export default function WaitingRoom() {
     }
   };
 
+  // Fungsi untuk Memulai Permainan
   const handleStartSession = async () => {
     try {
       const token = localStorage.getItem('auth_token');
@@ -122,7 +123,7 @@ export default function WaitingRoom() {
                   {/* Tombol X merah untuk Delete Tim */}
                   <button 
                     onClick={() => handleDeleteTeam(team.id, team.name)}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md hover:bg-red-600"
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md hover:bg-red-600 z-10"
                   >
                     X
                   </button>

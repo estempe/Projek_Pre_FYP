@@ -6,36 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
-<<<<<<< HEAD
-{
-    Schema::create('team_posts', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('team_id')->constrained('teams')->onDelete('cascade');
-        $table->foreignId('post_id')->constrained('posts')->onDelete('cascade');
-        $table->enum('status', ['completed', 'active', 'locked','reward'])->default('locked');
-        $table->integer('earned_coins')->default(0); 
-        $table->timestamp('check_in_time')->nullable(); 
-        $table->timestamps();
-    });
-}
-=======
     {
         Schema::create('team_posts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('team_id')->constrained('teams')->onDelete('cascade');
             $table->foreignId('post_id')->constrained('posts')->onDelete('cascade');
             
-            // Ubah tipe data enum menjadi string biasa
-            $table->string('status')->default('ready'); 
+            // Status pos: 'locked' (belum dikunjungi), 'active' (sedang dikerjakan), 'completed' (selesai dinilai)
+            $table->string('status')->default('locked'); 
             
-            $table->integer('earned_coins')->default(0); 
-            $table->timestamp('check_in_time')->nullable(); 
+            $table->integer('earned_coins')->default(0);
+            $table->timestamp('check_in_time')->nullable();
+            
             $table->timestamps();
         });
     }
->>>>>>> seany
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('team_posts');

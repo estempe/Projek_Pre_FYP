@@ -29,6 +29,7 @@ export default function LeaderboardPIC() {
     };
 
     fetchLeaderboard();
+    // Refresh otomatis setiap 2 detik agar klasemen selalu real-time
     const intervalId = setInterval(() => { fetchLeaderboard(); }, 2000);
     return () => clearInterval(intervalId);
   }, [id]);
@@ -36,48 +37,62 @@ export default function LeaderboardPIC() {
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-32">
       <div className="w-full max-w-md min-h-screen flex flex-col relative">
+        
+        {/* --- HEADER --- */}
         <div className="pt-12 px-6 flex justify-between items-center">
-           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-[#1D2B39] font-bold text-[15px]">
+           <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"></path></svg>
             Kembali
           </button>
-          {/* Tombol Menuju Halaman Redeem Kasir PIC */}
-          <button onClick={() => navigate(`/pic/session-redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-[#268bc4]">
-            Buka Kasir Redeem
+          
+          {/* Tombol Menuju Halaman Redeem PIC */}
+          <button onClick={() => navigate(`/pic/session-redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#1C6B99] hover:bg-[#268bc4] active:translate-y-[3px] active:shadow-none transition-all">
+            Redeem
           </button>
         </div>
 
+        {/* --- TITLE --- */}
         <div className="pt-8 pb-8 flex justify-center">
-          <h1 className="text-[22px] font-bold text-[#1D2A34] tracking-wide">LEADERBOARD</h1>
+          <h1 className="text-[22px] font-extrabold text-[#1D2A34] tracking-widest">LEADERBOARD</h1>
         </div>
 
+        {/* --- DAFTAR KLASEMEN TIM --- */}
         <div className="px-6 flex flex-col gap-4">
-          {isLoading ? <p className="text-center text-gray-500">Memuat klasemen...</p> : leaderboardData.length === 0 ? <p className="text-center text-gray-500">Belum ada tim.</p> : null}
+          {isLoading ? (
+            <p className="text-center text-[#92A0AD] font-semibold mt-10 animate-pulse">Memuat klasemen...</p>
+          ) : leaderboardData.length === 0 ? (
+            <p className="text-center text-[#92A0AD] font-semibold mt-10">Belum ada tim yang mendaftar.</p>
+          ) : null}
+
           {leaderboardData.map((team) => (
-            <div key={team.id} className="flex items-center bg-white rounded-[20px] p-4 border border-[#CBD5E1] shadow-sm">
-              <div className="w-10 shrink-0">
-                <span className="text-[18px] font-bold text-[#02101B]">#{team.rank}</span>
+            <div key={team.id} className="flex items-center bg-white rounded-[20px] p-4 border border-[#CBD5E1] shadow-sm hover:border-[#2E9AD7] transition-colors">
+              <div className="w-12 shrink-0 flex justify-center">
+                <span className={`text-[18px] font-black ${team.rank === 1 ? 'text-[#E5A015]' : team.rank === 2 ? 'text-[#94A3B8]' : team.rank === 3 ? 'text-[#B45309]' : 'text-[#02101B]'}`}>
+                  #{team.rank}
+                </span>
               </div>
-              <div className="flex-1 flex flex-col justify-center min-w-0 pr-2">
-                <p className="text-[#02101B] text-[16px] font-medium truncate w-full">{team.name}</p>
-                <p className="text-[#8C9BA5] text-[11px] font-light truncate w-full">{team.major}</p>
+              <div className="flex-1 flex flex-col justify-center min-w-0 pr-2 border-l border-[#F1F5F9] pl-3">
+                <p className="text-[#02101B] text-[15px] font-bold truncate w-full">{team.name}</p>
+                <p className="text-[#8C9BA5] text-[11px] font-semibold uppercase tracking-wide truncate w-full">{team.major}</p>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0 bg-[#FFF9E5] px-3 py-1.5 rounded-full border border-[#FEF08A]">
                 <img src={CoinIcon} alt="coin" className="w-4 h-4 object-contain" />
-                <span className="font-medium text-[#E5A015] text-[16px]">{team.score}</span>
+                <span className="font-extrabold text-[#E5A015] text-[15px]">{team.score}</span>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50">
-          <Link to={`/pic/session-live/${id}`} className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
+        {/* --- BOTTOM NAVIGATION --- */}
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-12 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50 border border-[#F1F5F9]">
+          <Link to={`/pic/session-live/${id}`} className="opacity-30 hover:opacity-100 hover:scale-110 transition-all">
             <img src={HomeIcon} alt="Home" className="w-7 h-7" />
           </Link>
-          <button className="hover:scale-110 opacity-100 transition-transform">
+          <button className="scale-110 opacity-100 drop-shadow-md">
             <img src={TrophyIcon} alt="Reward" className="w-7 h-7" />
           </button>
         </div>
+        
       </div>
     </div>
   );

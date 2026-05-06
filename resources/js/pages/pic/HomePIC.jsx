@@ -47,6 +47,8 @@ export default function HomePIC() {
   const liveSessions = sessions.filter(s => s.status === 'live');
   const upcomingSessions = sessions.filter(s => s.status === 'upcoming');
 
+  const usernamePIC = localStorage.getItem('username') || "PIC";
+
   return (
     <div className="min-h-screen bg-[#EBF2F8] font-sans flex justify-center pb-20">
       <div className="w-full max-w-md bg-[#EBF2F8] min-h-screen flex flex-col relative px-6 pt-12">
@@ -55,7 +57,7 @@ export default function HomePIC() {
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-[24px] font-bold text-[#1D2B39] leading-tight">Halo,</h1>
-            <h2 className="text-[28px] font-bold text-[#2E9AD7] leading-tight">Kakak PIC! 👋</h2>
+            <h2 className="text-[28px] font-bold text-[#2E9AD7] leading-tight">{usernamePIC}! 👋</h2>
           </div>
           <button 
             onClick={handleLogout}

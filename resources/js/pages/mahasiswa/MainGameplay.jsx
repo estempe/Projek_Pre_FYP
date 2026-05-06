@@ -1,7 +1,6 @@
-import React ,{useState,useEffect}from "react";
-import { Link,useLocation,useNavigate} from "react-router-dom";
-// Ganti path import ini menyesuaikan nama file yang kamu simpan di folder assets
-import CoinIcon from "../../assets/coin3D.png";
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import CoinIcon from "../../assets/Coin3D.png";
 import CheckGreenIcon from "../../assets/Visited-Pos.png";
 import FlagActiveIcon from "../../assets/Active-Pos.png";
 import FlagLockedIcon from "../../assets/Locked-Pos.png";
@@ -9,342 +8,236 @@ import GiftBoxIcon from "../../assets/gift-box.png";
 import HomeIcon from "../../assets/Home-Icon.svg";
 import TrophyIcon from "../../assets/Trophy-Icon.svg";
 
+// =======================================================
+// KOMPONEN TIMER UNTUK MASING-MASING POS (Saat "active")
+// =======================================================
+const PostTimer = ({ checkInTime, maxDuration }) => {
+  const [timeLeft, setTimeLeft] = useState("00:00");
 
+  useEffect(() => {
+    if (!checkInTime || !maxDuration) return;
+    const interval = setInterval(() => {
+      const checkInMs = new Date(checkInTime.replace(' ', 'T')).getTime();
+      const [h, m, s] = maxDuration.split(':').map(Number);
+      const durationMs = (h * 3600 + m * 60 + s) * 1000;
+      
+      const endMs = checkInMs + durationMs;
+      const nowMs = new Date().getTime();
+      const diffSec = Math.floor((endMs - nowMs) / 1000);
+
+      if (diffSec <= 0) {
+        setTimeLeft("Waktu Habis!");
+        clearInterval(interval);
+      } else {
+        const dm = Math.floor((diffSec % 3600) / 60).toString().padStart(2, '0');
+        const ds = (diffSec % 60).toString().padStart(2, '0');
+        setTimeLeft(`${dm}:${ds}`);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [checkInTime, maxDuration]);
+
+  return <span className="font-mono bg-[#FFF1F2] text-[#E11D48] px-2 py-0.5 rounded text-[11px] font-bold border border-[#FECDD3]">{timeLeft}</span>;
+};
+
+
+// =======================================================
+// KOMPONEN UTAMA
+// =======================================================
 export default function MainGameplay() {
-
   const location = useLocation();
   const navigate = useNavigate();
+  
   const namaTeam = location.state?.nameTeam;
   const sessionCode = location.state?.sessionCode;
-  const [posts,setPosts] = useState([]);
+  
+  const [posts, setPosts] = useState([]);
   const [coins, setCoins] = useState(0);
-  console.log(namaTeam,sessionCode);
+  const [sessionInfo, setSessionInfo] = useState({});
+  const [teamData, setTeamData] = useState(null); 
+  const [timeLeftSec, setTimeLeftSec] = useState(null);
+
   function goToLeaderboard() {
-    navigate("/leaderboard", {
-      state: {
-        sessionCode: sessionCode,
-        nameTeam: namaTeam,
-      },
-    });
-}
-const checkStatus = async () => {
+    navigate("/leaderboard", { state: { sessionCode, nameTeam: namaTeam } });
+  }
+
+  function goToRecovery() {
+    const finalEmergencyCode = teamData?.emergency_code || "KODE_TIDAK_DITEMUKAN";
+    navigate("/recovery", { state: { sessionCode, nameTeam: namaTeam, emergencyCode: finalEmergencyCode } });
+  }
+
+  const fetchAllData = async () => {
     try {
-      const res = await fetch(
-        `http://127.0.0.1:8000/api/session-status/${sessionCode}`
-      );
-      const data = await res.json();
-
-      console.log("Status:", data.status);
-
-      if (data.status === "ended") {
-        
-        navigate("/result", {
-        state: {
-          sessionCode: sessionCode,
-          nameTeam: namaTeam,
-        },
-      });
+      const resStatus = await fetch(`/api/session-status/${sessionCode}`);
+      const dataStatus = await resStatus.json();
+      
+      if (dataStatus.status === "ended") {
+        navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
+        return;
       }
+      
+      setTimeLeftSec(Math.floor(dataStatus.remaining_seconds));
+
+      const resCoin = await fetch("/api/getTeamCoins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_code: sessionCode, team_name: namaTeam }),
+      });
+      const dataCoin = await resCoin.json();
+      if (dataCoin.status === "success") {
+        setCoins(dataCoin.total_coins);
+        setTeamData(dataCoin.team); 
+      }
+
+      const resPosts = await fetch("/api/team-posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_code: sessionCode, team_name: namaTeam }),
+      });
+      const dataPosts = await resPosts.json();
+      if (dataPosts.status === "success") {
+        setPosts(dataPosts.data);
+      }
+
+      const resSess = await fetch("/api/sessionData", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_code: sessionCode }),
+      });
+      const dataSess = await resSess.json();
+      if (dataSess.status === "success") setSessionInfo(dataSess.data);
+
     } catch (error) {
-      console.error("Error cek status:", error);
+      console.error("Gagal sinkronisasi data:", error);
     }
   };
 
+  useEffect(() => {
+    if (!sessionCode || !namaTeam) return navigate("/");
+    
+    fetchAllData();     
+    const interval = setInterval(fetchAllData, 3000); 
+    return () => clearInterval(interval);
+  }, [sessionCode, namaTeam]);
 
-    useEffect(() => {
-      if (!sessionCode) return;
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setTimeLeftSec(prev => (prev === null || prev <= 0 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, []);
 
-      const interval = setInterval(() => {
-        checkStatus();
-      }, 2000); // cek tiap 2 detik
+  const formatTime = (sec) => {
+    if (!sec || sec <= 0) return "00:00:00";
+    const safeSec = Math.floor(sec);
+    const h = Math.floor(safeSec / 3600).toString().padStart(2, '0');
+    const m = Math.floor((safeSec % 3600) / 60).toString().padStart(2, '0');
+    const s = (safeSec % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
 
-      return () => clearInterval(interval);
-    }, [sessionCode]);
-  async function handleShowCoin() {
-  try {
-    const response = await fetch("http://127.0.0.1:8000/api/getTeamCoins", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        session_code: sessionCode,
-        team_name: namaTeam,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (data.status === "success") {
-      setCoins(data.total_coins);
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
-function goToRecovery() {
-  navigate("/recovery", {
-    state: {
-      sessionCode: sessionCode,
-      nameTeam: namaTeam,
-    },
-  });
-}
-  async function fetchTeamPosts() {
-  try {
-    const response = await fetch("http://127.0.0.1:8000/api/team-posts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        session_code: sessionCode,
-        team_name: namaTeam,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.status || "Error fetching posts");
-    }
-
-    // ✅ kalau sukses
-    if (data.status === "success") {
-      console.log("Posts:", data.data);
-
-      // simpan ke state (buat ditampilin nanti)
-      setPosts(data.data);
-    }
-
-  } catch (error) {
-    console.error("Error:", error.message);
-    alert("Gagal ambil data pos!");
-  }
-}
-    useEffect(() => {
-      if (!sessionCode || !namaTeam) return;
-
-      const fetchAll = () => {
-        fetchTeamPosts();
-        handleShowCoin();
-      };
-
-      fetchAll(); // pertama kali
-
-      const interval = setInterval(fetchAll, 2000);
-
-      return () => clearInterval(interval);
-    }, [sessionCode, namaTeam]);
-  // const pos_item = [
-  //   {
-  //     id: 1,
-  //     title: "STORY 1",
-  //     location: "LANTAI 1",
-  //     status: "completed", // completed | active | locked | reward
-  //     reward: "+ 220 BeeCoin",
-  //   },
-  //   {
-  //     id: 2,
-  //     title: "STORY 2",
-  //     location: "LANTAI 1",
-  //     status: "active",
-  //     countdown: "8:43",
-  //   },
-  //   {
-  //     id: 3,
-  //     title: "STORY 3",
-  //     location: "LANTAI 2 - WING A",
-  //     status: "locked",
-  //   },
-  //   {
-  //     id: 4,
-  //     title: "STORY 4",
-  //     location: "LANTAI 3 - DEPAN LKC",
-  //     status: "locked",
-  //   },
-  //   {
-  //     id: 5,
-  //     title: "STORY 5",
-  //     location: "LANTAI 4 - WING B",
-  //     status: "locked",
-  //   },
-  //   {
-  //     id: 6,
-  //     title: "TUKAR HADIAH",
-  //     location: "MMG (Lantai 2)",
-  //     status: "reward",
-  //   },
-  // ];
-
-  // Helper untuk menentukan icon berdasarkan status
   const getIcon = (status) => {
     switch (status) {
-      case "completed":
-        return CheckGreenIcon;
-      case "active":
-        return FlagActiveIcon;
-      case "locked":
-        return FlagLockedIcon;
-      case "reward":
-        return GiftBoxIcon;
-      default:
-        return FlagLockedIcon;
+      case "completed": return CheckGreenIcon;
+      case "active": return FlagActiveIcon;
+      default: return FlagLockedIcon;
     }
   };
 
   return (
-    // Background Light Blue sesuai desain awal
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-28">
       <div className="w-full max-w-md min-h-screen flex flex-col relative">
-        {/* --- 1. TOP HEADER SECTION (BeeCoin Score) --- */}
+        
+        {/* --- HEADER COIN --- */}
         <div className="flex flex-col items-center pt-12">
           <div className="flex items-center gap-3">
             <img src={CoinIcon} alt="BeeCoin" className="w-10 h-10" />
-            <h1 className="text-[44px] font-bold text-[#02101B] leading-none tracking-tight mt-1">
-              {coins}
-            </h1>
+            <h1 className="text-[44px] font-bold text-[#02101B] leading-none tracking-tight mt-1">{coins}</h1>
           </div>
-          {/* Font mono untuk tulisan BeeCoin agar mirip typewriter di desain */}
-          <p className="font-mono text-[#8C9BA5] text-[18px] tracking-widest mt-1">
-            BeeCoin
-          </p>
+          <p className="font-mono text-[#8C9BA5] text-[18px] tracking-widest mt-1">BeeCoin</p>
         </div>
 
-        {/* --- 2. INFO CARD SECTION --- */}
+        {/* --- INFO CARD SECTION --- */}
         <div className="mx-6 mt-8 bg-white rounded-[20px] p-5 border border-dashed border-[#B5C5D1] shadow-sm relative z-10">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-[#546878] text-[13px] font-bold uppercase">
-                PRE FYP B30 - BATCH 1
-              </p>
-              <p className="text-[#546878] text-[13px] font-bold uppercase">
-                
+          <div className="flex justify-between items-start mb-4 gap-4">
+            <div className="flex-1">
+              <p className="text-[#546878] text-[13px] font-bold uppercase leading-snug">
+                {sessionInfo.name || "Memuat..."}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-[#8C9BA5] text-[11px] mb-0.5">Waktu Tersisa</p>
-              <p className="text-[#02101B] text-[18px] font-bold">01:34:00</p>
+            <div className="text-right shrink-0">
+              <p className="text-[#8C9BA5] text-[11px] mb-0.5">Waktu Tersisa Sesi</p>
+              <p className={`text-[18px] font-bold ${timeLeftSec === 0 ? "text-red-500" : "text-[#02101B]"}`}>
+                {formatTime(timeLeftSec)}
+              </p>
             </div>
           </div>
 
-          <button 
-          onClick={goToRecovery}
-          className="w-full bg-[#1D2A34] text-white py-3.5 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12.65 10A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H14v4h4v-4h3v-4h-8.35zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z" />
-            </svg>
-            Akses Cadangan Tim
+          <button onClick={goToRecovery} className="w-full bg-[#1D2A34] text-white py-3.5 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform">
+             Akses Cadangan Tim
           </button>
         </div>
 
-        {/* --- 3. TIMELINE SECTION --- */}
+        {/* --- TIMELINE POS --- */}
         <div className="px-8 mt-10">
+          {posts.length === 0 && <p className="text-center text-gray-500 text-sm mt-4">Memuat urutan pos...</p>}
+          
           {posts.map((pos, index) => {
-            const isLast = index === posts.length - 1;
-
             return (
-              <div key={pos.id} className="flex gap-5">
-                {/* Kolom Kiri: Ikon & Garis Putus-putus */}
+              <div key={index} className="flex gap-5">
+                
                 <div className="flex flex-col items-center w-16 shrink-0">
-                  <img
-                    src={getIcon(pos.status)}
-                    alt="status icon"
-                    className="w-14 h-14 object-contain drop-shadow-md z-10"
-                  />
-                  {/* Render garis putus-putus KECUALI di item terakhir */}
-                  {!isLast && (
-                    <div className="flex-1 w-0 border-l-2 border-dashed border-[#A0B0BC] my-2 min-h-[40px]"></div>
-                  )}
+                  <img src={getIcon(pos.status)} alt="status" className="w-12 h-12 object-contain drop-shadow-md z-10" />
+                  {/* Garis putus-putus selalu ditampilkan karena di ujung ada Pos Tukar Hadiah */}
+                  <div className="flex-1 w-0 border-l-2 border-dashed border-[#A0B0BC] my-2 min-h-[40px]"></div>
                 </div>
 
-                {/* Kolom Kanan: Detail Konten */}
-                <div className={`flex-1 ${!isLast ? "pb-8" : "pb-4"} pt-1`}>
-                  <h2 className="text-[18px] font-bold text-[#02101B]">
-                    {pos.title}
-                  </h2>
+                <div className="flex-1 pb-10 pt-1">
+                  <h2 className="text-[18px] font-bold text-[#02101B]">{pos.name}</h2>
+                  <p className="text-[#8C9BA5] text-[12px] font-bold uppercase tracking-wide mb-2">📍 {pos.location}</p>
 
-                  <div className="flex items-center gap-1.5 mt-0.5 mb-2">
-                    <span className="text-[#D7392E] text-[12px]">📍</span>
-                    <p className="text-[#8C9BA5] text-[12px] font-bold uppercase tracking-wide">
-                      {pos.location}
-                    </p>
-                  </div>
-
-                  {/* Pills Status */}
-                  {pos.status === "completed" && (
+                  {/* LOGIKA STATUS POS */}
+                  {pos.status === "active" ? (
+                    <div className="flex items-center gap-2">
+                      <span className="bg-[#E5A015] text-white text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-sm">CHECKED IN</span>
+                      <PostTimer checkInTime={pos.check_in_time} maxDuration={pos.max_duration} />
+                    </div>
+                  ) : pos.status === "completed" ? (
                     <div className="inline-flex items-center gap-1.5 bg-[#A3C756] px-3 py-1 rounded-full text-white text-[12px] font-bold shadow-sm">
                       <img src={CoinIcon} alt="coin" className="w-4 h-4" />
-                      <p className="font-light">{pos.reward}</p>
+                      <p className="font-light">+ {pos.earned_coins} BeeCoin</p>
                     </div>
-                  )}
-
-                  {pos.status === "active" && (
-                    <>
-                      <div className="inline-flex items-center gap-1 bg-[#2E9AD7] px-3 py-1 rounded-full text-white text-[12px] font-bold shadow-sm">
-                        <svg
-                          className="w-3.5 h-3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M5 13l4 4L19 7"
-                          ></path>
-                        </svg>
-                        <p className="font-light">Checked In</p>
-                      </div>
-
-                      {/* Kotak Countdown khusus state active */}
-                      <div className="bg-white rounded-xl p-3 mt-3 shadow-sm max-w-[200px]">
-                        <p className="text-[#8C9BA5] text-[10px] uppercase font-light mb-0.5">
-                          Countdown
-                        </p>
-                        <p className="text-[#02101B] text-[20px] font-bold leading-none">
-                          {pos.countdown}
-                        </p>
-                      </div>
-                    </>
-                  )}
-
-                  {pos.status === "locked" && (
-                    <div className="inline-flex items-center gap-1 bg-[#BFBFBF] px-3 py-1 rounded-full text-[#FFFFFF] text-[12px] font-bold shadow-sm">
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M6 18L18 6M6 6l12 12"
-                        ></path>
-                      </svg>
-                      <p className="font-light">Belum Checked In</p>
-                    </div>
+                  ) : (
+                    <span className="bg-[#CBD5E1] text-white text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-sm">BELUM SELESAI</span>
                   )}
                 </div>
               </div>
             );
           })}
+
+          {/* ================================================= */}
+          {/* --- POS REDEEM / PENUKARAN HADIAH (KADO) ---        */}
+          {/* ================================================= */}
+          {sessionInfo.redeem_name && (
+            <div className="flex gap-5">
+              <div className="flex flex-col items-center w-16 shrink-0">
+                <img src={GiftBoxIcon} alt="reward" className="w-12 h-12 object-contain drop-shadow-md z-10" />
+              </div>
+
+              <div className="flex-1 pb-4 pt-1">
+                <h2 className="text-[18px] font-bold text-[#02101B]">{sessionInfo.redeem_name}</h2>
+                <p className="text-[#8C9BA5] text-[12px] font-bold uppercase tracking-wide mb-2">📍 {sessionInfo.redeem_location}</p>
+                <span className="bg-[#2E9AD7] text-white text-[10px] px-3 py-1 rounded-full font-extrabold shadow-sm tracking-wider">TUJUAN AKHIR</span>
+              </div>
+            </div>
+          )}
+
         </div>
 
-        {/* --- 4. FLOATING BOTTOM NAVIGATION --- */}
+        {/* --- BOTTOM NAVIGATION --- */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50">
-          {/* Home Icon (Active) - Tetap tombol biasa karena kita sedang di Home */}
-          <button className="hover:scale-110 transition-transform" disabled>
-            <img src={HomeIcon} alt="Home" className="w-7 h-7" />
-          </button>
-
-          {/* Trophy Icon (Inactive) - Ganti jadi Link menuju /leaderboard */}
-          <button onClick={goToLeaderboard} className="opacity-40 hover:opacity-100 hover:scale-110 transition-all">
-            <img src={TrophyIcon} alt="Reward" className="w-7 h-7" />
-          </button>
+          <button className="hover:scale-110 transition-transform" disabled><img src={HomeIcon} alt="Home" className="w-7 h-7" /></button>
+          <button onClick={goToLeaderboard} className="opacity-40 hover:opacity-100 hover:scale-110 transition-all"><img src={TrophyIcon} alt="Reward" className="w-7 h-7" /></button>
         </div>
       </div>
     </div>

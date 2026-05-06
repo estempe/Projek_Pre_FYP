@@ -1,123 +1,101 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // 1. Tambahkan useNavigate di sini
+import { useNavigate } from 'react-router-dom';
 
-export default function LoginSuperadmin() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const navigate = useNavigate(); // 2. Aktifkan fitur pindah halaman
+export default function Login() {
+    const [username, setUsername] = useState(''); // Ubah email jadi username
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    
-    try {
-      // 3. Kita "tembak" (kirim data) ke pintu API Laravel yang sudah kita buat
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password,
-        }),
-      });
-
-      const data = await response.json();
-
-      // 4. Cek apakah Laravel bilang 'success'
-      if (response.ok && data.success) {
-        alert("Login Berhasil! Halo " + data.data.name);
+    const handleLogin = async (e) => {
+        e.preventDefault(); 
         
-        // Simpan token (kunci masuk) di ingatan browser
-        localStorage.setItem('auth_token', data.token);
-        
-        // Pindah ke halaman Home
-        navigate('/superadmin/home');
-      } else {
-        // Kalau salah password/username
-        alert(data.message || "Login gagal, coba cek lagi ya!");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Wah, gagal terhubung ke server Backend nih!");
-    }
-  };
+        if (!username || !password) {
+            alert('Username dan Password wajib diisi!');
+            return;
+        }
 
-  return (
-    <div className="min-h-screen bg-[#02101B] flex justify-center font-sans">
-      {/* Mobile Container (Dark Blue) persis Design System kamu */}
-      <div className="w-full max-w-md bg-[#02101B] min-h-screen flex flex-col relative overflow-hidden">
-        
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col justify-center px-8 mt-[4vh]">
-          
-          <h1 className="text-[32px] font-bold text-white text-center leading-tight mb-8">
-            Masuk (SuperAdmin)
-          </h1>
+        setIsLoading(true);
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ username, password }) // Kirim username
+            });
 
-          <form onSubmit={handleLogin} className="w-full flex flex-col gap-6">
-            
-            {/* --- INPUT GROUP 1: USERNAME --- */}
-            <div className="bg-[#1D2A34] rounded-3xl p-3 shadow-lg flex flex-col mx-1">
-              <div className="w-fit mx-auto px-4 py-1.5 bg-[#979DA1] rounded-t-[10px] flex justify-center items-center relative z-10 -mb-px">
-                <p className="text-[#FFFFFF] font-bold text-[14px]">Username</p>
-              </div>
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                className="w-full font-sans bg-transparent rounded-[18px] py-4 px-6 text-center text-lg text-white font-medium border-2 border-[#546878] placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#2E9AD7] focus:border-transparent transition-all"
-              />
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                localStorage.setItem('auth_token', data.token);
+                
+                if (data.data.role === 'superadmin') {
+                    navigate('/superadmin/home');
+                } else if (data.data.role === 'pic') {
+                    navigate('/pic/home');
+                } else {
+                    alert('Role tidak dikenali.');
+                }
+            } else {
+                alert(data.message || 'Login gagal, pastikan Username dan Password benar.');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('Gagal terhubung ke server Laravel.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-[#02101B] flex justify-center font-sans">
+            <div className="w-full max-w-md bg-[#02101B] min-h-screen flex flex-col justify-center px-8 relative">
+                
+                <div className="text-center mb-10">
+                    <h1 className="text-[32px] font-bold text-white leading-tight mb-2">
+                        Selamat Datang!
+                    </h1>
+                    <p className="text-white/70 text-[15px] font-medium">
+                        Silakan masuk sebagai Admin
+                    </p>
+                </div>
+
+                <form onSubmit={handleLogin} className="bg-[#1D2A34] rounded-[24px] p-6 shadow-lg flex flex-col gap-5">
+                    
+                    <div className="flex flex-col">
+                        <label className="text-[#FFFFFF] font-bold text-[13px] mb-2 px-1">Username</label>
+                        <input
+                            type="text" // Ubah dari email ke text
+                            placeholder="Contoh: superadmin"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="w-full bg-transparent rounded-[16px] py-3.5 px-5 text-white font-medium border-2 border-[#546878] focus:border-[#2E9AD7] outline-none transition-all"
+                        />
+                    </div>
+
+                    <div className="flex flex-col">
+                        <label className="text-[#FFFFFF] font-bold text-[13px] mb-2 px-1">Kata Sandi</label>
+                        <input
+                            type="password"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full bg-transparent rounded-[16px] py-3.5 px-5 text-white font-medium border-2 border-[#546878] focus:border-[#2E9AD7] outline-none transition-all"
+                        />
+                    </div>
+
+                    <button 
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full mt-4 bg-[#2E9AD7] text-white font-bold text-[16px] py-3.5 rounded-[16px] border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-none active:translate-y-[6px] transition-all disabled:opacity-50"
+                    >
+                        {isLoading ? "Memproses..." : "Masuk"}
+                    </button>
+
+                </form>
             </div>
-
-            {/* --- INPUT GROUP 2: PASSWORD --- */}
-            <div className="bg-[#1D2A34] rounded-3xl p-3 shadow-lg flex flex-col mx-1">
-              <div className="w-fit mx-auto px-4 py-1.5 bg-[#979DA1] rounded-t-[10px] flex justify-center items-center relative z-10 -mb-px">
-                <p className="text-[#FFFFFF] font-bold text-[14px]">Password</p>
-              </div>
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full font-sans bg-transparent rounded-[18px] py-4 px-6 text-center text-lg text-white font-medium border-2 border-[#546878] placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#2E9AD7] focus:border-transparent transition-all"
-              />
-            </div>
-
-          </form>
         </div>
-
-        {/* --- BOTTOM SECTION (Link Email & Tombol Masuk) --- */}
-        <div className="px-8 pb-12 flex flex-col items-center">
-          
-          {/* Teks Bantuan Superadmin */}
-          <div className="text-center mb-6">
-            <p className="text-[#FFFFFF] text-[14px] font-medium mb-1">
-              Ingin buat akun superadmin baru?
-            </p>
-            {/* Menggunakan tag <a> dengan mailto agar otomatis buka aplikasi Email */}
-            <a 
-              href="mailto:abdul.hidayat@binus.ac.id"
-              className="text-[#FFFFFF] text-[14px] font-bold underline underline-offset-4 hover:text-[#2E9AD7] transition-colors cursor-pointer"
-            >
-              Kirim Email
-            </a>
-          </div>
-
-          <button 
-            onClick={handleLogin}
-            type="button"
-            className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[6px] transition-all"
-          >
-            Masuk
-          </button>
-        </div>
-
-      </div>
-    </div>
-  );
+    );
 }

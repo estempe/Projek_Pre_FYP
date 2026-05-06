@@ -48,9 +48,9 @@ export default function LeaderboardSuperadmin() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"></path></svg>
             Kembali
           </button>
-          {/* Tombol Menuju Halaman Redeem Kasir */}
+          {/* Tombol Menuju Halaman Redeem */}
           <button onClick={() => navigate(`/superadmin/session/redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-[#268bc4]">
-            Buka Kasir Redeem
+            Redeem
           </button>
         </div>
 

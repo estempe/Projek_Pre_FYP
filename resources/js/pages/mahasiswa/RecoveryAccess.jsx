@@ -1,29 +1,30 @@
 import React from "react";
-import { Link,useLocation,useNavigate} from "react-router-dom";
-
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Lock from "../../assets/Lock.svg";
-
-// DATA MASIH DUMMY, NANTI GANTI PAKAI API AJA
 
 export default function RecoveryAccess() {
   const location = useLocation();
   const navigate = useNavigate();
+  
   const namaTeam = location.state?.nameTeam;
   const sessionCode = location.state?.sessionCode;
-  function handleGoToGameplay() {
+  const emergencyCode = location.state?.emergencyCode || "KODE_TIDAK_DITEMUKAN";
 
-  navigate("/gameplay", {
-    state: {
-      nameTeam: namaTeam,
-      sessionCode: sessionCode,
-    },
-  });
-}
+  function handleGoToGameplay() {
+    navigate("/gameplay", {
+      state: {
+        nameTeam: namaTeam,
+        sessionCode: sessionCode,
+        emergencyCode: emergencyCode // Jangan lupa bawa kode ini lagi agar tidak hilang!
+      },
+    });
+  }
+
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-10">
       <div className="w-full max-w-md min-h-screen flex flex-col relative px-8">
         
-        {/* --- HEADER: Tombol Kembali --- */}
+        {/* --- HEADER --- */}
         <div className="pt-12 pb-8">
           <button
             onClick={handleGoToGameplay}
@@ -39,12 +40,10 @@ export default function RecoveryAccess() {
         {/* --- MAIN CONTENT --- */}
         <div className="flex-1 flex flex-col items-center mt-4">
           
-          {/* Lock Icon (SVG Inline) */}
           <div className="text-[#8C9BA5] mb-6">
             <img src={Lock} alt="lock" />
           </div>
 
-          {/* Subtitle */}
           <div className="text-center mb-10">
             <p className="text-[#8C9BA5] text-[16px] font-medium leading-relaxed">
               Takut sesi terputus?<br />
@@ -57,34 +56,38 @@ export default function RecoveryAccess() {
             
             {/* Input 1: Nama Team */}
             <div className="relative mb-8">
-              {/* Floating Label */}
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1D2A34] text-white px-4 py-1 rounded-md text-[12px] font-bold z-10 shadow-sm">
                 Nama team
               </div>
-              {/* Input Box */}
               <div className="w-full border border-[#B5C5D1] rounded-[16px] py-4 text-center text-[#02101B] font-bold text-[18px]">
                 {namaTeam}
               </div>
             </div>
 
-            {/* Garis Pemisah (Divider) */}
             <div className="w-full h-px bg-[#E8F1F8] mb-8"></div>
 
-            {/* Input 2: Kode Masuk */}
-            <div className="relative">
-              {/* Floating Label */}
+            {/* Input 2: Kode Masuk Sesi */}
+            <div className="relative mb-8">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1D2A34] text-white px-4 py-1 rounded-md text-[12px] font-bold z-10 shadow-sm">
                 Kode masuk
               </div>
-              {/* Input Box */}
               <div className="w-full border border-[#B5C5D1] rounded-[16px] py-4 text-center text-[#02101B] font-bold text-[20px] tracking-[0.2em]">
                 {sessionCode}
               </div>
             </div>
 
+            {/* Input 3: Kode Darurat (Emergency) */}
+            <div className="relative mt-8">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#E53E3E] text-white px-4 py-1 rounded-md text-[12px] font-bold z-10 shadow-sm whitespace-nowrap">
+                Kode Darurat (Rahasia!)
+              </div>
+              <div className="w-full border border-[#E53E3E] bg-[#FFF5F5] rounded-[16px] py-4 text-center text-[#E53E3E] font-bold text-[20px] tracking-[0.2em]">
+                {emergencyCode}
+              </div>
+            </div>
+
           </div>
 
-          {/* Footer Notes */}
           <p className="text-[#8C9BA5] text-[13px] text-center mt-10 px-4 leading-relaxed">
             Simpan/Screenshot halaman ini agar tidak kehilangan akses tim.
           </p>

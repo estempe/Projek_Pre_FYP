@@ -1,38 +1,36 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
+import { useNavigate } from 'react-router-dom'; 
 
 export default function LoginPIC() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate(); // 2. Aktifkan navigasi
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate(); 
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (!username || !password) {
+      alert("Username dan Password wajib diisi!");
+      return;
+    }
     
+    setIsLoading(true);
     try {
-      // 3. Tembak data ke API Laravel
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          username: username,
-          password: password,
-        }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await response.json();
 
-      // 4. Cek keberhasilan
       if (response.ok && data.success) {
-        alert("Login PIC Berhasil! Selamat bertugas, " + data.data.name);
-        
-        // Simpan token ke localStorage
+        alert(`Halo, ${data.data.username}! Selamat bertugas.`);
         localStorage.setItem('auth_token', data.token);
-        
-        // Arahkan ke halaman Home khusus PIC
+        localStorage.setItem('username', data.data.username);
         navigate('/pic/home');
       } else {
         alert(data.message || "Login gagal, periksa kembali username dan password!");
@@ -40,71 +38,61 @@ export default function LoginPIC() {
     } catch (error) {
       console.error("Error:", error);
       alert("Gagal terhubung ke server. Pastikan backend menyala!");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#02101B] flex justify-center font-sans">
-      {/* Mobile Container (Dark Blue) persis CreateTeam */}
       <div className="w-full max-w-md bg-[#02101B] min-h-screen flex flex-col relative overflow-hidden">
         
-        {/* Main Content */}
         <div className="flex-1 flex flex-col justify-center px-8 mt-[4vh]">
-          
           <h1 className="text-[32px] font-bold text-white text-center leading-tight mb-8">
             Masuk (PIC)
           </h1>
 
           <form onSubmit={handleLogin} className="w-full flex flex-col gap-6">
             
-            {/* --- INPUT GROUP 1: USERNAME --- */}
             <div className="bg-[#1D2A34] rounded-3xl p-3 shadow-lg flex flex-col mx-1">
-              {/* Label "Username" dengan gaya topi persis CreateTeam */}
               <div className="w-fit mx-auto px-4 py-1.5 bg-[#979DA1] rounded-t-[10px] flex justify-center items-center relative z-10 -mb-px">
                 <p className="text-[#FFFFFF] font-bold text-[14px]">Username</p>
               </div>
-
-              {/* Input Field Username */}
               <input
                 type="text"
                 placeholder="Ketik username disini"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full font-sans bg-transparent rounded-[18px] py-4 px-6 text-center text-lg text-white font-medium border-2 border-[#546878] placeholder-white/40 placeholder:font-sans placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-[#2E9AD7] focus:border-transparent transition-all"
+                className="w-full font-sans bg-transparent rounded-[18px] py-4 px-6 text-center text-lg text-white font-medium border-2 border-[#546878] placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#2E9AD7] transition-all"
               />
             </div>
 
-            {/* --- INPUT GROUP 2: PASSWORD --- */}
             <div className="bg-[#1D2A34] rounded-3xl p-3 shadow-lg flex flex-col mx-1">
-              {/* Label "Password" dengan gaya topi persis CreateTeam */}
               <div className="w-fit mx-auto px-4 py-1.5 bg-[#979DA1] rounded-t-[10px] flex justify-center items-center relative z-10 -mb-px">
                 <p className="text-[#FFFFFF] font-bold text-[14px]">Password</p>
               </div>
-
-              {/* Input Field Password */}
               <input
                 type="password"
                 placeholder="Ketik password disini"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full font-sans bg-transparent rounded-[18px] py-4 px-6 text-center text-lg text-white font-medium border-2 border-[#546878] placeholder-white/40 placeholder:font-sans placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-[#2E9AD7] focus:border-transparent transition-all"
+                className="w-full font-sans bg-transparent rounded-[18px] py-4 px-6 text-center text-lg text-white font-medium border-2 border-[#546878] placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#2E9AD7] transition-all"
               />
             </div>
 
-          </form>
-        </div>
+            <div className="pt-6 flex flex-col items-center">
+              <button 
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-none active:translate-y-[6px] transition-all disabled:opacity-50"
+              >
+                {isLoading ? "Memproses..." : "Masuk"}
+              </button>
+            </div>
 
-        {/* --- BOTTOM BUTTON (Persis Design System kamu) --- */}
-        <div className="px-8 pb-12 flex flex-col items-center">
-          <button 
-            onClick={handleLogin}
-            type="button"
-            className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-[0_0_0_0_#1C6B99] active:translate-y-[6px] transition-all"
-          >
-            Masuk
-          </button>
+          </form>
         </div>
 
       </div>

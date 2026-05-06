@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 
-// --- IMPORT ASSETS (Pakai ../../) ---
 import BackArrowDark from '../../assets/Back-Arrow-Icon-Dark.svg';
 import CoinIcon from '../../assets/Coin3D.png';
 import HomeIcon from '../../assets/Home-Icon.svg';
 import TrophyIcon from '../../assets/Trophy-Icon.svg';
 
-// --- KOMPONEN KARTU REDEEM ---
-const RedeemCardSuperadmin = ({ team, onTukarClick }) => {
+const RedeemCardSuperadmin = ({ team, sessionStatus, onTukarClick }) => {
   return (
     <div className="bg-white rounded-[20px] p-5 shadow-sm border border-white flex flex-col mb-4 relative z-10">
       <div className="mb-4">
@@ -29,6 +27,8 @@ const RedeemCardSuperadmin = ({ team, onTukarClick }) => {
             </div>
           ) : null}
         </div>
+        
+        {/* LOGIKA BARU: Tombol Redeem HANYA mati kalau sudah ditukar. Sesi "ended" tidak lagi mematikan tombol */}
         {team.isRedeemed ? (
           <button disabled className="bg-[#b1b8c0] text-white font-bold text-[11px] px-4 py-2.5 rounded-lg cursor-not-allowed">
             Sudah Ditukar
@@ -46,13 +46,12 @@ const RedeemCardSuperadmin = ({ team, onTukarClick }) => {
   );
 };
 
-
-// --- KOMPONEN UTAMA ---
 export default function SessionRedeemSuperadmin() {
   const { id } = useParams();
   const navigate = useNavigate();
   
   const [sessionName, setSessionName] = useState('Memuat Sesi...');
+  const [sessionStatus, setSessionStatus] = useState(''); 
   const [teamsData, setTeamsData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -60,15 +59,12 @@ export default function SessionRedeemSuperadmin() {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [redeemInput, setRedeemInput] = useState('');
 
-  // Tarik Data Tim & Sesi dari API
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      // Ambil data klasemen/koin
       const resLeaderboard = await fetch(`/api/sessions/${id}/leaderboard`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      // Ambil nama sesi
       const resSession = await fetch(`/api/sessions/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -76,9 +72,13 @@ export default function SessionRedeemSuperadmin() {
       const dataLeaderboard = await resLeaderboard.json();
       const dataSession = await resSession.json();
 
-      if (resLeaderboard.ok && dataLeaderboard.success) setTeamsData(dataLeaderboard.data);
-      if (resSession.ok && dataSession.success) setSessionName(dataSession.data.name);
-
+      if (resLeaderboard.ok && dataLeaderboard.success) {
+        setTeamsData(dataLeaderboard.data);
+      }
+      if (resSession.ok && dataSession.success) {
+        setSessionName(dataSession.data.name);
+        setSessionStatus(dataSession.data.status); 
+      }
     } catch (error) {
       console.error("Gagal mengambil data:", error);
     }
@@ -88,7 +88,6 @@ export default function SessionRedeemSuperadmin() {
     fetchData();
   }, [id]);
 
-  // Handlers untuk Tukar Hadiah
   const handleTukarClick = (team) => {
     setSelectedTeam(team);
     setModalState('input'); 
@@ -109,7 +108,7 @@ export default function SessionRedeemSuperadmin() {
 
       if (response.ok && result.success) {
         setModalState('success');
-        fetchData(); // Refresh data koin terbaru
+        fetchData(); 
       } else {
         alert(result.message);
       }
@@ -118,7 +117,6 @@ export default function SessionRedeemSuperadmin() {
     }
   };
   
-  // Handlers untuk Tutup Event
   const handleAkhirkanSesi = () => setModalState('end_event');
   const processCloseEvent = async () => {
     try {
@@ -130,8 +128,9 @@ export default function SessionRedeemSuperadmin() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        alert("Seluruh sesi telah resmi ditutup!");
-        navigate('/superadmin/home');
+        alert("Permainan resmi ditutup! Penukaran hadiah masih bisa dilakukan.");
+        fetchData(); 
+        setModalState('idle'); 
       }
     } catch (error) {
       alert("Gagal menutup sesi.");
@@ -152,22 +151,22 @@ export default function SessionRedeemSuperadmin() {
     <div className="min-h-screen bg-[#EBF2F8] font-sans flex justify-center pb-32">
       <div className="w-full max-w-md bg-[#EBF2F8] min-h-screen flex flex-col relative px-6 pt-12">
         
-        {/* --- HEADER DENGAN TOMBOL AKHIRKAN SESI --- */}
         <div className="flex justify-between items-center mb-8 relative z-10">
           <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
             <img src={BackArrowDark} alt="Kembali" className="w-5 h-5" />
             Kembali
           </button>
           
-          <button 
-            onClick={handleAkhirkanSesi}
-            className="text-[#E53E3E] font-bold text-[14px] underline underline-offset-4 hover:opacity-70 transition-opacity"
-          >
-            Akhirkan Sesi
-          </button>
+          {sessionStatus !== 'ended' && (
+            <button 
+              onClick={handleAkhirkanSesi}
+              className="text-[#E53E3E] font-bold text-[14px] underline underline-offset-4 hover:opacity-70 transition-opacity"
+            >
+              Akhirkan Permainan
+            </button>
+          )}
         </div>
 
-        {/* --- NAMA SESI & JUDUL REDEEM --- */}
         <h2 className="text-[14px] font-bold text-[#1D2B39] mb-8 leading-tight relative z-10">
           {sessionName}
         </h2>
@@ -176,7 +175,6 @@ export default function SessionRedeemSuperadmin() {
           Redeem
         </h1>
 
-        {/* --- SEARCH BAR --- */}
         <div className="mb-6 relative z-10">
           <input 
             type="text" placeholder="Cari team..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
@@ -184,15 +182,18 @@ export default function SessionRedeemSuperadmin() {
           />
         </div>
 
-        {/* --- DAFTAR TEAM CARDS --- */}
         <div className="flex flex-col">
           {filteredTeams.map((team) => (
-            <RedeemCardSuperadmin key={team.id} team={team} onTukarClick={handleTukarClick} />
+            <RedeemCardSuperadmin 
+              key={team.id} 
+              team={team} 
+              sessionStatus={sessionStatus} 
+              onTukarClick={handleTukarClick} 
+            />
           ))}
           {filteredTeams.length === 0 && <p className="text-center text-gray-500 mt-4">Tim tidak ditemukan.</p>}
         </div>
 
-        {/* --- BOTTOM NAVIGATION --- */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-40">
           <Link to="/superadmin/home" className="hover:scale-110 transition-transform">
             <img src={HomeIcon} alt="Home" className="w-7 h-7" />
@@ -202,13 +203,9 @@ export default function SessionRedeemSuperadmin() {
           </Link>
         </div>
 
-        {/* ================================================== */}
-        {/* AREA MODAL / POP-UP OVERLAY                       */}
-        {/* ================================================== */}
         {modalState !== 'idle' && (
           <div className="fixed inset-0 bg-[#EBF2F8]/80 backdrop-blur-[2px] z-50 flex items-center justify-center px-6">
             
-            {/* MODAL 1: INPUT JUMLAH KOIN */}
             {modalState === 'input' && selectedTeam && (
               <div className="w-full max-w-[340px] bg-white rounded-[24px] p-6 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] flex flex-col items-center text-center animate-fade-in-up">
                 <h2 className="text-[18px] font-bold text-[#1D2B39] mb-6 leading-relaxed">
@@ -227,7 +224,6 @@ export default function SessionRedeemSuperadmin() {
               </div>
             )}
 
-            {/* MODAL 2: PENUKARAN BERHASIL */}
             {modalState === 'success' && (
               <div className="w-full max-w-[340px] bg-white rounded-[24px] p-8 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] flex flex-col items-center text-center animate-fade-in-up">
                 <h2 className="text-[18px] font-bold text-[#1D2B39] mb-8">Penukaran Berhasil!</h2>
@@ -237,17 +233,16 @@ export default function SessionRedeemSuperadmin() {
               </div>
             )}
 
-            {/* MODAL 3: KONFIRMASI TUTUP ACARA */}
             {modalState === 'end_event' && (
               <div className="w-full max-w-[340px] bg-white rounded-[24px] p-6 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] flex flex-col items-center text-center animate-fade-in-up">
                 <div className="w-14 h-14 bg-[#FEE2E2] text-[#E53E3E] rounded-full flex items-center justify-center mb-5">
                   <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                 </div>
-                <h2 className="text-[18px] font-bold text-[#1D2B39] mb-3 leading-relaxed">Akhiri Seluruh Rangkaian<br />Acara Ini?</h2>
-                <p className="text-[#92A0AD] text-[12px] mb-8 px-2">Penukaran hadiah akan ditutup. Semua data tim akan diarsipkan dan tidak bisa diubah lagi.</p>
+                <h2 className="text-[18px] font-bold text-[#1D2B39] mb-3 leading-relaxed">Akhiri Seluruh<br />Permainan?</h2>
+                <p className="text-[#92A0AD] text-[12px] mb-8 px-2">Data pos akan diarsipkan dan peserta diarahkan ke halaman akhir. <br/><br/><span className="text-[#1D2B39] font-bold">Tombol Redeem akan tetap terbuka.</span></p>
                 <div className="w-full flex flex-col gap-3">
                   <button onClick={processCloseEvent} className="w-full bg-[#E53E3E] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#C53030] shadow-[0_4px_0_0_#9B2C2C] hover:bg-[#C53030] active:shadow-[0_0_0_0_#9B2C2C] active:translate-y-[4px] transition-all">
-                    Ya, Akhiri Sesi
+                    Ya, Akhiri Permainan
                   </button>
                   <button onClick={closeModal} className="w-full bg-white text-[#1D2B39] font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#1D2B39] shadow-[0_4px_0_0_#1D2B39] hover:bg-gray-50 active:shadow-[0_0_0_0_#1D2B39] active:translate-y-[4px] transition-all">
                     Batal
