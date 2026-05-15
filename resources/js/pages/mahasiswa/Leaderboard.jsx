@@ -6,15 +6,12 @@ import TrophyIcon from "../../assets/Trophy-Icon.svg";
 
 export default function Leaderboard() {
   const [teams, setTeams] = useState([]);
-  const prevTeamsRef = useRef([]);
   const navigate = useNavigate();
   const location = useLocation();
   const namaTeam = location.state?.nameTeam;
   const sessionCode = location.state?.sessionCode;
 
-  useEffect(() => {
-    prevTeamsRef.current = teams;
-  }, [teams]);
+  const prevTeamsRef = useRef(JSON.parse(sessionStorage.getItem(`lb_mhs_${sessionCode}`)) || []);
 
   function goToGameplay() {
     navigate("/gameplay", { state: { nameTeam: namaTeam, sessionCode: sessionCode } });
@@ -30,7 +27,7 @@ export default function Leaderboard() {
     } catch (error) {}
   };
 
-  async function fetchLeaderboard() {
+  async function fetchLeaderboard(isPolling = false) {
     try {
       const response = await fetch("/api/leaderboard", {
         method: "POST",
@@ -39,7 +36,13 @@ export default function Leaderboard() {
       });
       const data = await response.json();
       if (data.status === "success") {
-        setTeams(data.data);
+        setTeams((current) => {
+          if (isPolling && current.length > 0) {
+            prevTeamsRef.current = current;
+            sessionStorage.setItem(`lb_mhs_${sessionCode}`, JSON.stringify(current));
+          }
+          return data.data;
+        });
       }
     } catch (error) {}
   }
@@ -54,21 +57,19 @@ export default function Leaderboard() {
     const pollStatus = async () => {
       if (!isMounted) return;
       await checkStatus();
-      if (isMounted) {
-        statusTimeoutId = setTimeout(pollStatus, 15000); 
-      }
+      if (isMounted) statusTimeoutId = setTimeout(pollStatus, 15000);
     };
 
-    const pollLeaderboard = async () => {
+    const pollLeaderboard = async (isPolling) => {
       if (!isMounted) return;
-      await fetchLeaderboard();
+      await fetchLeaderboard(isPolling);
       if (isMounted) {
-        leaderboardTimeoutId = setTimeout(pollLeaderboard, 30000); 
+        leaderboardTimeoutId = setTimeout(() => pollLeaderboard(true), 30000);
       }
     };
 
     pollStatus();
-    pollLeaderboard();
+    pollLeaderboard(false);
 
     return () => {
       isMounted = false;

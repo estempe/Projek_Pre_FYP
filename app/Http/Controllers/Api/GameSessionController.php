@@ -192,11 +192,28 @@ class GameSessionController extends Controller
 
     public function getLeaderboard($id)
     {
+        // 1. Hitung total pos yang ada di sesi ini
+        $totalPosts = \App\Models\Post::where('game_session_id', $id)->count();
+
+        // 2. Ambil semua tim berdasarkan skor
         $teams = \App\Models\Team::where('game_session_id', $id)
                     ->selectRaw('teams.*, (total_coins + redeemed_amount) as all_time_score')
                     ->orderBy('all_time_score', 'desc')->get();
 
-        $leaderboard = $teams->map(function($team, $index) {
+        // 3. Hitung berapa pos yang statusnya 'completed' untuk masing-masing tim
+        $completedPosts = \App\Models\TeamPost::whereIn('team_id', $teams->pluck('id'))
+                                ->where('status', 'completed')
+                                ->selectRaw('team_id, count(*) as total_completed')
+                                ->groupBy('team_id')
+                                ->pluck('total_completed', 'team_id');
+
+        // 4. Petakan datanya
+        $leaderboard = $teams->map(function($team, $index) use ($totalPosts, $completedPosts) {
+            
+            // Cek apakah jumlah pos yang diselesaikan tim == total pos di sesi ini
+            $teamCompletedCount = $completedPosts[$team->id] ?? 0;
+            $isFinished = ($totalPosts > 0 && $teamCompletedCount >= $totalPosts);
+
             return [
                 'id'             => $team->id,
                 'rank'           => $index + 1,
@@ -205,13 +222,14 @@ class GameSessionController extends Controller
                 'score'          => (int) $team->all_time_score, 
                 'balance'        => (int) $team->total_coins,   
                 'isRedeemed'     => (bool) $team->is_redeemed,
-                'redeemedAmount' => (int) $team->redeemed_amount
+                'redeemedAmount' => (int) $team->redeemed_amount,
+                'isFinished'     => $isFinished // <-- INI YANG DITAMBAHKAN
             ];
         });
 
         return response()->json(['success' => true, 'data' => $leaderboard]);
     }
-
+    
     public function redeemCoins(Request $request, $id)
     {
         $request->validate(['team_id' => 'required', 'amount' => 'required|numeric|min:1']);
