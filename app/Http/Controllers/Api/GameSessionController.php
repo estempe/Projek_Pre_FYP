@@ -60,7 +60,8 @@ class GameSessionController extends Controller
                         'game_session_id' => $session->id, 
                         'name'            => $posItem['name'] ?: 'Pos Default', 
                         'location'        => $posItem['location'] ?: 'Belum diatur',
-                        'max_duration'    => $posItem['duration'] ?: '00:00',
+                        // sementara hardcode karena gak dipakai
+                        'max_duration'    => '00:00:00',
                     ]);
                 }
             }
@@ -137,10 +138,40 @@ class GameSessionController extends Controller
     public function checkInPos(Request $request, $id)
     {
         $request->validate(['team_id' => 'required', 'post_id' => 'required']);
+        
+        //validasi urutan pos
+        $session = GameSession::with('posts')->find($id);
+        if (!$session) return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
+
+        $posts = $session->posts; // Asumsi daftar pos berurutan
+        $targetIndex = -1;
+        foreach ($posts as $index => $post) {
+            if ($post->id == $request->post_id) {
+                $targetIndex = $index;
+                break;
+            }
+        }
+
+        // Jika bukan pos pertama (index 0), WAJIB cek pos sebelumnya!
+        if ($targetIndex > 0) {
+            $prevPostId = $posts[$targetIndex - 1]->id;
+            $prevPostStatus = \App\Models\TeamPost::where('team_id', $request->team_id)
+                                ->where('post_id', $prevPostId)->first();
+            
+            if (!$prevPostStatus || $prevPostStatus->status !== 'completed') {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'DITOLAK: Tim ini belum menyelesaikan Pos sebelumnya!'
+                ], 400); // Tolak 
+            }
+        }
+        // ------------------------------------------
+
         $teamPost = \App\Models\TeamPost::firstOrNew(['team_id' => $request->team_id, 'post_id' => $request->post_id]);
         $teamPost->status = 'active';
         $teamPost->check_in_time = now(); 
         $teamPost->save();
+        
         return response()->json(['success' => true, 'message' => 'Check in berhasil!']);
     }
 

@@ -9,54 +9,82 @@ export default function LeaderboardPIC() {
   const navigate = useNavigate();
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionStatus, setSessionStatus] = useState('');
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
+    const fetchLeaderboardAndStatus = async () => {
       try {
         const token = localStorage.getItem('auth_token');
-        const response = await fetch(`/api/sessions/${id}/leaderboard`, {
+        
+        const resLeaderboard = await fetch(`/api/sessions/${id}/leaderboard`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
         });
-        const result = await response.json();
-        if (response.ok && result.success) {
-          setLeaderboardData(result.data);
+        const dataLeaderboard = await resLeaderboard.json();
+        if (resLeaderboard.ok && dataLeaderboard.success) {
+          setLeaderboardData(dataLeaderboard.data);
         }
+
+        const resSession = await fetch(`/api/sessions/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+        });
+        const sessionResult = await resSession.json();
+        if (resSession.ok && sessionResult.success) {
+          setSessionStatus(sessionResult.data.status);
+        }
+
       } catch (error) {
-        console.error("Gagal mengambil leaderboard:", error);
+        console.error(error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchLeaderboard();
-    // Refresh otomatis setiap 2 detik agar klasemen selalu real-time
-    const intervalId = setInterval(() => { fetchLeaderboard(); }, 2000);
-    return () => clearInterval(intervalId);
-  }, [id]);
+    let isMounted = true;
+    let timeoutId;
 
+    const pollData = async () => {
+      if (!isMounted) return;
+      
+      await fetchLeaderboardAndStatus();
+      
+      if (isMounted) {
+        timeoutId = setTimeout(pollData, 30000); 
+      }
+    };
+
+    pollData();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [id]);
+  
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-32">
       <div className="w-full max-w-md min-h-screen flex flex-col relative">
         
-        {/* --- HEADER --- */}
         <div className="pt-12 px-6 flex justify-between items-center">
            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"></path></svg>
             Kembali
           </button>
           
-          {/* Tombol Menuju Halaman Redeem PIC */}
-          <button onClick={() => navigate(`/pic/session-redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#1C6B99] hover:bg-[#268bc4] active:translate-y-[3px] active:shadow-none transition-all">
-            Redeem
-          </button>
+          {sessionStatus === 'ended' ? (
+            <button onClick={() => navigate(`/pic/session-redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#1C6B99] hover:bg-[#268bc4] active:translate-y-[3px] active:shadow-none transition-all">
+              Redeem
+            </button>
+          ) : (
+            <button disabled className="bg-[#CBD5E1] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-sm cursor-not-allowed">
+              Redeem Terkunci
+            </button>
+          )}
         </div>
 
-        {/* --- TITLE --- */}
         <div className="pt-8 pb-8 flex justify-center">
           <h1 className="text-[22px] font-extrabold text-[#1D2A34] tracking-widest">LEADERBOARD</h1>
         </div>
 
-        {/* --- DAFTAR KLASEMEN TIM --- */}
         <div className="px-6 flex flex-col gap-4">
           {isLoading ? (
             <p className="text-center text-[#92A0AD] font-semibold mt-10 animate-pulse">Memuat klasemen...</p>
@@ -83,7 +111,6 @@ export default function LeaderboardPIC() {
           ))}
         </div>
 
-        {/* --- BOTTOM NAVIGATION --- */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-12 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50 border border-[#F1F5F9]">
           <Link to={`/pic/session-live/${id}`} className="opacity-30 hover:opacity-100 hover:scale-110 transition-all">
             <img src={HomeIcon} alt="Home" className="w-7 h-7" />

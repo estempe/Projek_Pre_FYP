@@ -15,7 +15,7 @@ export default function RecoveryAccess() {
       state: {
         nameTeam: namaTeam,
         sessionCode: sessionCode,
-        emergencyCode: emergencyCode // Jangan lupa bawa kode ini lagi agar tidak hilang!
+        emergencyCode: emergencyCode 
       },
     });
   }
@@ -24,7 +24,6 @@ export default function RecoveryAccess() {
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-10">
       <div className="w-full max-w-md min-h-screen flex flex-col relative px-8">
         
-        {/* --- HEADER --- */}
         <div className="pt-12 pb-8">
           <button
             onClick={handleGoToGameplay}
@@ -37,8 +36,7 @@ export default function RecoveryAccess() {
           </button>
         </div>
 
-        {/* --- MAIN CONTENT --- */}
-        <div className="flex-1 flex flex-col items-center mt-4">
+       <div className="flex-1 flex flex-col items-center mt-4">
           
           <div className="text-[#8C9BA5] mb-6">
             <img src={Lock} alt="lock" />
@@ -51,10 +49,8 @@ export default function RecoveryAccess() {
             </p>
           </div>
 
-          {/* --- RECOVERY CARD --- */}
           <div className="w-full bg-white rounded-[32px] pt-8 pb-8 px-6 shadow-sm relative">
             
-            {/* Input 1: Nama Team */}
             <div className="relative mb-8">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1D2A34] text-white px-4 py-1 rounded-md text-[12px] font-bold z-10 shadow-sm">
                 Nama team
@@ -66,7 +62,6 @@ export default function RecoveryAccess() {
 
             <div className="w-full h-px bg-[#E8F1F8] mb-8"></div>
 
-            {/* Input 2: Kode Masuk Sesi */}
             <div className="relative mb-8">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1D2A34] text-white px-4 py-1 rounded-md text-[12px] font-bold z-10 shadow-sm">
                 Kode masuk
@@ -76,7 +71,6 @@ export default function RecoveryAccess() {
               </div>
             </div>
 
-            {/* Input 3: Kode Darurat (Emergency) */}
             <div className="relative mt-8">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#E53E3E] text-white px-4 py-1 rounded-md text-[12px] font-bold z-10 shadow-sm whitespace-nowrap">
                 Kode Darurat (Rahasia!)

@@ -8,7 +8,6 @@ export default function SessionDetail() {
   const [sessionData, setSessionData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Format tanggal menjadi tulisan rapi (e.g., "27 April 2026")
   const formatTanggal = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);

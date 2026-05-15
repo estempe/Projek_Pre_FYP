@@ -28,7 +28,6 @@ const RedeemCardPIC = ({ team, sessionStatus, onTukarClick }) => {
           ) : null}
         </div>
         
-        {/* LOGIKA BARU: Tombol Redeem HANYA mati kalau sudah ditukar. */}
         {team.isRedeemed ? (
           <button disabled className="bg-[#b1b8c0] text-white font-bold text-[11px] px-4 py-2.5 rounded-lg cursor-not-allowed">
             Sudah Ditukar

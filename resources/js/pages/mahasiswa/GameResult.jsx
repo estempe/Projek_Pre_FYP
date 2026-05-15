@@ -25,9 +25,7 @@ export default function GameResult() {
   const [qrImage, setQrImage] = useState(FallbackQR);
   const [redeemLocation, setRedeemLocation] = useState("MMG (Lantai 2)");
 
-  // =======================================================
-  // EFFECT 1: Tarik Data QR & Lokasi (Cukup 1 kali di awal)
-  // =======================================================
+
   useEffect(() => {
     if (!sessionCode) return;
 
@@ -57,9 +55,7 @@ export default function GameResult() {
     .catch(err => console.error("Gagal load session data:", err));
   }, [sessionCode]);
 
-  // =======================================================
-  // EFFECT 2: Polling Koin & Status Redeem (Tiap 3 Detik)
-  // =======================================================
+
   useEffect(() => {
     if (!sessionCode || !actualTeamName) return;
 
@@ -73,7 +69,6 @@ export default function GameResult() {
       .then(data => {
         if (data.status === "success" && data.team) {
           
-          // JIKA TIM SUDAH DIREDEEM OLEH PIC -> PINDAH HALAMAN!
           if (data.team.is_redeemed === true || data.team.is_redeemed === 1) {
              navigate("/redeem-success", { 
                state: { 
@@ -83,7 +78,6 @@ export default function GameResult() {
                } 
              });
           } else {
-             // JIKA BELUM, UPDATE SKOR (Berjaga-jaga ada koin yang telat masuk)
              setScore(data.total_coins);
           }
           
@@ -92,9 +86,9 @@ export default function GameResult() {
       .catch(err => console.error("Gagal load skor:", err));
     };
 
-    // Jalankan sekali lalu ulang setiap 3 detik
+    // Jalankan sekali lalu ulang setiap 5 detik
     checkTeamStatus();
-    const intervalId = setInterval(checkTeamStatus, 3000);
+    const intervalId = setInterval(checkTeamStatus, 5000);
     
     // Bersihkan interval saat pindah halaman
     return () => clearInterval(intervalId);

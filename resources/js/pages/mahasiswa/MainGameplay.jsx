@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import CoinIcon from "../../assets/Coin3D.png";
 import CheckGreenIcon from "../../assets/Visited-Pos.png";
@@ -8,104 +8,95 @@ import GiftBoxIcon from "../../assets/gift-box.png";
 import HomeIcon from "../../assets/Home-Icon.svg";
 import TrophyIcon from "../../assets/Trophy-Icon.svg";
 
-// =======================================================
-// KOMPONEN TIMER UNTUK MASING-MASING POS (Saat "active")
-// =======================================================
-const PostTimer = ({ checkInTime, maxDuration }) => {
-  const [timeLeft, setTimeLeft] = useState("00:00");
-
-  useEffect(() => {
-    if (!checkInTime || !maxDuration) return;
-    const interval = setInterval(() => {
-      const checkInMs = new Date(checkInTime.replace(' ', 'T')).getTime();
-      const [h, m, s] = maxDuration.split(':').map(Number);
-      const durationMs = (h * 3600 + m * 60 + s) * 1000;
-      
-      const endMs = checkInMs + durationMs;
-      const nowMs = new Date().getTime();
-      const diffSec = Math.floor((endMs - nowMs) / 1000);
-
-      if (diffSec <= 0) {
-        setTimeLeft("Waktu Habis!");
-        clearInterval(interval);
-      } else {
-        const dm = Math.floor((diffSec % 3600) / 60).toString().padStart(2, '0');
-        const ds = (diffSec % 60).toString().padStart(2, '0');
-        setTimeLeft(`${dm}:${ds}`);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [checkInTime, maxDuration]);
-
-  return <span className="font-mono bg-[#FFF1F2] text-[#E11D48] px-2 py-0.5 rounded text-[11px] font-bold border border-[#FECDD3]">{timeLeft}</span>;
-};
-
-
-// =======================================================
-// KOMPONEN UTAMA
-// =======================================================
 export default function MainGameplay() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  const namaTeam = location.state?.nameTeam;
-  const sessionCode = location.state?.sessionCode;
+  const savedUser = JSON.parse(localStorage.getItem("active_user")) || {};
+
+  const namaTeam = location.state?.nameTeam || savedUser.nameTeam || "Tim";
+  const sessionCode = location.state?.sessionCode || savedUser.sessionCode;
+  const initialEmergencyCode = location.state?.emergencyCode || savedUser.emergencyCode;
+
+  const cacheKey = `game_data_${sessionCode}_${namaTeam}`;
+  const getCache = () => JSON.parse(localStorage.getItem(cacheKey)) || {};
+
+  const [posts, setPosts] = useState(getCache().posts || []);
+  const [coins, setCoins] = useState(getCache().coins || 0);
+  const [sessionInfo, setSessionInfo] = useState(getCache().sessionInfo || {});
+  const [timeLeftSec, setTimeLeftSec] = useState(getCache().timeLeftSec || null);
+  const [emergencyCode, setEmergencyCode] = useState(
+    initialEmergencyCode || getCache().emergencyCode || "KODE_TIDAK_DITEMUKAN"
+  );
   
-  const [posts, setPosts] = useState([]);
-  const [coins, setCoins] = useState(0);
-  const [sessionInfo, setSessionInfo] = useState({});
-  const [teamData, setTeamData] = useState(null); 
-  const [timeLeftSec, setTimeLeftSec] = useState(null);
+  const timeoutRef = useRef(null);
 
   function goToLeaderboard() {
     navigate("/leaderboard", { state: { sessionCode, nameTeam: namaTeam } });
   }
 
   function goToRecovery() {
-    const finalEmergencyCode = teamData?.emergency_code || "KODE_TIDAK_DITEMUKAN";
-    navigate("/recovery", { state: { sessionCode, nameTeam: namaTeam, emergencyCode: finalEmergencyCode } });
+    navigate("/recovery", { 
+      state: { sessionCode, nameTeam: namaTeam, emergencyCode: emergencyCode } 
+    });
   }
 
   const fetchAllData = async () => {
+    if (!sessionCode || !namaTeam || namaTeam === "Tim") return;
+    
     try {
-      const resStatus = await fetch(`/api/session-status/${sessionCode}`);
-      const dataStatus = await resStatus.json();
-      
+      const [resStatus, resCoin, resPosts, resSess] = await Promise.all([
+        fetch(`/api/session-status/${sessionCode}`),
+        fetch("/api/getTeamCoins", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_code: sessionCode, team_name: namaTeam }),
+        }),
+        fetch("/api/team-posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_code: sessionCode, team_name: namaTeam }),
+        }),
+        fetch("/api/sessionData", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_code: sessionCode }),
+        })
+      ]);
+
+      const [dataStatus, dataCoin, dataPosts, dataSess] = await Promise.all([
+        resStatus.json(), resCoin.json(), resPosts.json(), resSess.json()
+      ]);
+
       if (dataStatus.status === "ended") {
         navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
         return;
       }
-      
-      setTimeLeftSec(Math.floor(dataStatus.remaining_seconds));
 
-      const resCoin = await fetch("/api/getTeamCoins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_code: sessionCode, team_name: namaTeam }),
-      });
-      const dataCoin = await resCoin.json();
-      if (dataCoin.status === "success") {
-        setCoins(dataCoin.total_coins);
-        setTeamData(dataCoin.team); 
+      if (dataStatus.status === "upcoming") {
+        navigate("/waiting", { state: { sessionCode, nameTeam: namaTeam, emergencyCode: emergencyCode } });
+        return;
       }
 
-      const resPosts = await fetch("/api/team-posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_code: sessionCode, team_name: namaTeam }),
-      });
-      const dataPosts = await resPosts.json();
-      if (dataPosts.status === "success") {
-        setPosts(dataPosts.data);
-      }
+      const newTime = Math.floor(dataStatus.remaining_seconds);
+      const newCoins = dataCoin.total_coins;
+      const newPosts = dataPosts.data || [];
+      const newSessInfo = dataSess.data || {};
+      const fetchedEmergencyCode = dataCoin.team?.emergency_code || emergencyCode;
 
-      const resSess = await fetch("/api/sessionData", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_code: sessionCode }),
-      });
-      const dataSess = await resSess.json();
-      if (dataSess.status === "success") setSessionInfo(dataSess.data);
+      setCoins(newCoins);
+      setPosts(newPosts);
+      setSessionInfo(newSessInfo);
+      setTimeLeftSec(newTime);
+      setEmergencyCode(fetchedEmergencyCode);
+
+      localStorage.setItem(cacheKey, JSON.stringify({
+        posts: newPosts,
+        coins: newCoins,
+        sessionInfo: newSessInfo,
+        timeLeftSec: newTime,
+        emergencyCode: fetchedEmergencyCode
+      }));
 
     } catch (error) {
       console.error("Gagal sinkronisasi data:", error);
@@ -113,13 +104,29 @@ export default function MainGameplay() {
   };
 
   useEffect(() => {
-    if (!sessionCode || !namaTeam) return navigate("/");
+    if (!sessionCode || !namaTeam || namaTeam === "Tim") {
+      return navigate("/");
+    }
     
-    fetchAllData();     
-    const interval = setInterval(fetchAllData, 3000); 
-    return () => clearInterval(interval);
+    let isMounted = true;
+    const autoPollData = async () => {
+      if (!isMounted) return;
+      await fetchAllData();
+      if (isMounted) {
+        // Tembak otomatis setiap 60 detik
+        timeoutRef.current = setTimeout(autoPollData, 60000); 
+      }
+    };
+    
+    autoPollData();
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutRef.current);
+    };
   }, [sessionCode, namaTeam]);
 
+  // TIMER LOKAL (Menghitung detik)
   useEffect(() => {
     const timerId = setInterval(() => {
       setTimeLeftSec(prev => (prev === null || prev <= 0 ? 0 : prev - 1));
@@ -129,10 +136,9 @@ export default function MainGameplay() {
 
   const formatTime = (sec) => {
     if (!sec || sec <= 0) return "00:00:00";
-    const safeSec = Math.floor(sec);
-    const h = Math.floor(safeSec / 3600).toString().padStart(2, '0');
-    const m = Math.floor((safeSec % 3600) / 60).toString().padStart(2, '0');
-    const s = (safeSec % 60).toString().padStart(2, '0');
+    const h = Math.floor(sec / 3600).toString().padStart(2, '0');
+    const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
+    const s = (sec % 60).toString().padStart(2, '0');
     return `${h}:${m}:${s}`;
   };
 
@@ -147,9 +153,11 @@ export default function MainGameplay() {
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-28">
       <div className="w-full max-w-md min-h-screen flex flex-col relative">
-        
-        {/* --- HEADER COIN --- */}
-        <div className="flex flex-col items-center pt-12">
+                <div className="flex flex-col items-center pt-12">
+          <p className="text-[#8C9BA5] text-[15px] font-bold mb-2 tracking-wide uppercase">
+            Halo, <span className="text-[#02101B]">{namaTeam}</span> 👋
+          </p>
+
           <div className="flex items-center gap-3">
             <img src={CoinIcon} alt="BeeCoin" className="w-10 h-10" />
             <h1 className="text-[44px] font-bold text-[#02101B] leading-none tracking-tight mt-1">{coins}</h1>
@@ -157,16 +165,16 @@ export default function MainGameplay() {
           <p className="font-mono text-[#8C9BA5] text-[18px] tracking-widest mt-1">BeeCoin</p>
         </div>
 
-        {/* --- INFO CARD SECTION --- */}
+        {/* --- INFO CARD --- */}
         <div className="mx-6 mt-8 bg-white rounded-[20px] p-5 border border-dashed border-[#B5C5D1] shadow-sm relative z-10">
           <div className="flex justify-between items-start mb-4 gap-4">
             <div className="flex-1">
               <p className="text-[#546878] text-[13px] font-bold uppercase leading-snug">
-                {sessionInfo.name || "Memuat..."}
+                {sessionInfo.name || "Menyiapkan Sesi..."}
               </p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-[#8C9BA5] text-[11px] mb-0.5">Waktu Tersisa Sesi</p>
+              <p className="text-[#8C9BA5] text-[11px] mb-0.5">Sisa Waktu Sesi</p>
               <p className={`text-[18px] font-bold ${timeLeftSec === 0 ? "text-red-500" : "text-[#02101B]"}`}>
                 {formatTime(timeLeftSec)}
               </p>
@@ -180,50 +188,39 @@ export default function MainGameplay() {
 
         {/* --- TIMELINE POS --- */}
         <div className="px-8 mt-10">
-          {posts.length === 0 && <p className="text-center text-gray-500 text-sm mt-4">Memuat urutan pos...</p>}
-          
-          {posts.map((pos, index) => {
-            return (
-              <div key={index} className="flex gap-5">
-                
-                <div className="flex flex-col items-center w-16 shrink-0">
-                  <img src={getIcon(pos.status)} alt="status" className="w-12 h-12 object-contain drop-shadow-md z-10" />
-                  {/* Garis putus-putus selalu ditampilkan karena di ujung ada Pos Tukar Hadiah */}
-                  <div className="flex-1 w-0 border-l-2 border-dashed border-[#A0B0BC] my-2 min-h-[40px]"></div>
-                </div>
-
-                <div className="flex-1 pb-10 pt-1">
-                  <h2 className="text-[18px] font-bold text-[#02101B]">{pos.name}</h2>
-                  <p className="text-[#8C9BA5] text-[12px] font-bold uppercase tracking-wide mb-2">📍 {pos.location}</p>
-
-                  {/* LOGIKA STATUS POS */}
-                  {pos.status === "active" ? (
-                    <div className="flex items-center gap-2">
-                      <span className="bg-[#E5A015] text-white text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-sm">CHECKED IN</span>
-                      <PostTimer checkInTime={pos.check_in_time} maxDuration={pos.max_duration} />
-                    </div>
-                  ) : pos.status === "completed" ? (
-                    <div className="inline-flex items-center gap-1.5 bg-[#A3C756] px-3 py-1 rounded-full text-white text-[12px] font-bold shadow-sm">
-                      <img src={CoinIcon} alt="coin" className="w-4 h-4" />
-                      <p className="font-light">+ {pos.earned_coins} BeeCoin</p>
-                    </div>
-                  ) : (
-                    <span className="bg-[#CBD5E1] text-white text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-sm">BELUM SELESAI</span>
-                  )}
-                </div>
+          {posts.map((pos, index) => (
+            <div key={index} className="flex gap-5">
+              <div className="flex flex-col items-center w-16 shrink-0">
+                <img src={getIcon(pos.status)} alt="status" className="w-12 h-12 object-contain drop-shadow-md z-10" />
+                <div className="flex-1 w-0 border-l-2 border-dashed border-[#A0B0BC] my-2 min-h-[40px]"></div>
               </div>
-            );
-          })}
 
-          {/* ================================================= */}
-          {/* --- POS REDEEM / PENUKARAN HADIAH (KADO) ---        */}
-          {/* ================================================= */}
+              <div className="flex-1 pb-10 pt-1">
+                <h2 className="text-[18px] font-bold text-[#02101B]">{pos.name}</h2>
+                <p className="text-[#8C9BA5] text-[12px] font-bold uppercase tracking-wide mb-2">📍 {pos.location}</p>
+
+                {pos.status === "active" ? (
+                  <div className="flex items-center gap-2">
+                    <span className="bg-[#E5A015] text-white text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-sm">CHECKED IN</span>
+                    <span className="font-mono bg-[#FFF1F2] text-[#E11D48] px-2.5 py-1 rounded text-[11px] font-bold border border-[#FECDD3]">Sedang Mengerjakan</span>
+                  </div>
+                ) : pos.status === "completed" ? (
+                  <div className="inline-flex items-center gap-1.5 bg-[#A3C756] px-3 py-1 rounded-full text-white text-[12px] font-bold shadow-sm">
+                    <img src={CoinIcon} alt="coin" className="w-4 h-4" />
+                    <p className="font-light">+ {pos.earned_coins} BeeCoin</p>
+                  </div>
+                ) : (
+                  <span className="bg-[#CBD5E1] text-white text-[10px] px-2.5 py-1 rounded-full font-extrabold shadow-sm">BELUM SELESAI</span>
+                )}
+              </div>
+            </div>
+          ))}
+
           {sessionInfo.redeem_name && (
             <div className="flex gap-5">
               <div className="flex flex-col items-center w-16 shrink-0">
                 <img src={GiftBoxIcon} alt="reward" className="w-12 h-12 object-contain drop-shadow-md z-10" />
               </div>
-
               <div className="flex-1 pb-4 pt-1">
                 <h2 className="text-[18px] font-bold text-[#02101B]">{sessionInfo.redeem_name}</h2>
                 <p className="text-[#8C9BA5] text-[12px] font-bold uppercase tracking-wide mb-2">📍 {sessionInfo.redeem_location}</p>
@@ -231,10 +228,9 @@ export default function MainGameplay() {
               </div>
             </div>
           )}
-
         </div>
 
-        {/* --- BOTTOM NAVIGATION --- */}
+        {/* --- NAVBAR --- */}
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full px-10 py-4 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] flex items-center gap-12 z-50">
           <button className="hover:scale-110 transition-transform" disabled><img src={HomeIcon} alt="Home" className="w-7 h-7" /></button>
           <button onClick={goToLeaderboard} className="opacity-40 hover:opacity-100 hover:scale-110 transition-all"><img src={TrophyIcon} alt="Reward" className="w-7 h-7" /></button>

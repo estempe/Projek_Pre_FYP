@@ -5,18 +5,15 @@ export default function RedeemSuccess() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Mengambil data yang dilempar dari halaman sebelumnya
   const redeemedCoins = location.state?.redeemedCoins || 0;
   const nameTeam = location.state?.nameTeam || "Tim Kamu";
   const sessionCode = location.state?.sessionCode || "";
 
   const handleKembali = () => {
-    // Kembali ke halaman Game Result jika ingin melihat QR/Skor lagi
     navigate("/result", { state: { sessionCode, nameTeam } });
   };
 
   const handleTutupSesi = () => {
-    // Menghapus jejak dan kembali ke halaman utama (Mulai Baru)
     navigate("/");
   };
 
@@ -24,7 +21,6 @@ export default function RedeemSuccess() {
     <div className="min-h-screen bg-[#F0F8FF] font-sans flex flex-col items-center">
       <div className="w-full max-w-md min-h-screen flex flex-col relative px-6 pt-12 pb-8">
         
-        {/* --- TOMBOL KEMBALI --- */}
         <button 
           onClick={handleKembali}
           className="flex items-center gap-2 text-[#02101B] font-bold text-[15px] hover:opacity-70 transition-opacity self-start z-10"
@@ -35,16 +31,13 @@ export default function RedeemSuccess() {
           Kembali
         </button>
 
-        {/* --- KONTEN UTAMA --- */}
         <div className="flex-1 flex flex-col items-center justify-center -mt-10">
           
           <h1 className="text-[28px] font-bold text-[#02101B] text-center leading-[1.3] mb-8">
             Penukaran Hadiah<br />Berhasil
           </h1>
 
-          {/* AREA GAMBAR KADO */}
           <div className="mb-8 w-40 h-40 flex items-center justify-center">
-            {/* Ganti dengan <img src={GiftIcon} ... /> jika kamu sudah menyalakan import gambarnya */}
             <div className="text-[100px] leading-none drop-shadow-xl hover:scale-110 transition-transform duration-500 animate-bounce">
               🎁
             </div>
@@ -60,7 +53,6 @@ export default function RedeemSuccess() {
           
         </div>
 
-        {/* --- TOMBOL TUTUP SESI --- */}
         <div className="w-full pt-6 mt-auto pb-4">
           <button 
             onClick={handleTutupSesi}

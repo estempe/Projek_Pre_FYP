@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 export default function CreateTeam() {
   const [teamName, setTeamName] = useState("");
   const [teamMajor, setTeamMajor] = useState("");
+  const [isLoading, setIsLoading] = useState(false); 
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -15,7 +16,24 @@ export default function CreateTeam() {
       return;
     }
 
+    setIsLoading(true); // Kunci tombol saat ditekan
+
     try {
+      const checkRes = await fetch(`/api/session-status/${sessionCode}`);
+      const checkData = await checkRes.json();
+      
+      if (checkData.status === "live") {
+          alert("Waktu habis! Pendaftaran ditutup karena permainan sudah dimulai.");
+          navigate("/"); 
+          return;
+      }
+      if (checkData.status === "ended") {
+          alert("Sesi ini telah resmi berakhir.");
+          navigate("/"); 
+          return;
+      }
+
+      // Jika masih aman (upcoming), lanjut buat tim
       const response = await fetch("/api/create-teams", {
         method: "POST",
         headers: { 
@@ -32,6 +50,12 @@ export default function CreateTeam() {
       const data = await response.json();
 
       if (data.status === "team_created") {
+          localStorage.setItem("active_user", JSON.stringify({
+             sessionCode: sessionCode,
+             nameTeam: teamName,
+             emergencyCode: data.team.emergency_code
+          }));
+
           navigate("/waiting", {
               state: { 
                   sessionCode: sessionCode, 
@@ -39,17 +63,30 @@ export default function CreateTeam() {
                   emergencyCode: data.team.emergency_code 
               },
           });
-      } else if (data.status === "team_exists") {
+      } 
+      else if (data.status === "team_exists") {
           alert("Nama tim di sesi ini sudah dipakai! Coba nama lain.");
-      } else if (data.status === "session_not_found") {
+      } 
+      else if (data.status === "session_started") {
+          alert("Waktu habis! Pendaftaran ditutup karena permainan sudah dimulai.");
+          navigate("/"); 
+      } 
+      else if (data.status === "session_ended") {
+          alert("Sesi ini telah resmi berakhir.");
+          navigate("/"); 
+      } 
+      else if (data.status === "session_not_found") {
           alert("Sesi tidak valid atau sudah ditutup.");
-      } else {
+      } 
+      else {
           alert("Terjadi masalah saat menyimpan data tim.");
       }
 
     } catch (error) {
       console.error("Create Team Error:", error);
       alert("Terjadi kesalahan koneksi ke server!");
+    } finally {
+      setIsLoading(false); 
     }
   }
 
@@ -77,7 +114,8 @@ export default function CreateTeam() {
                   placeholder="Cth: Kelompok 1"
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
-                  className="w-full font-sans bg-transparent rounded-2xl py-3 px-5 text-white font-medium border-2 border-[#546878] focus:border-[#2E9AD7] outline-none transition-all"
+                  disabled={isLoading}
+                  className="w-full font-sans bg-transparent rounded-2xl py-3 px-5 text-white font-medium border-2 border-[#546878] focus:border-[#2E9AD7] outline-none transition-all disabled:opacity-50"
                 />
             </div>
 
@@ -88,7 +126,8 @@ export default function CreateTeam() {
                   placeholder="Cth: Business Information Technology"
                   value={teamMajor}
                   onChange={(e) => setTeamMajor(e.target.value)}
-                  className="w-full font-sans bg-transparent rounded-2xl py-3 px-5 text-white font-medium border-2 border-[#546878] focus:border-[#2E9AD7] outline-none transition-all"
+                  disabled={isLoading}
+                  className="w-full font-sans bg-transparent rounded-2xl py-3 px-5 text-white font-medium border-2 border-[#546878] focus:border-[#2E9AD7] outline-none transition-all disabled:opacity-50"
                 />
             </div>
           </div>
@@ -97,8 +136,10 @@ export default function CreateTeam() {
         <div className="px-8 pb-12 flex flex-col items-center">
           <button 
             onClick={handleCheckTeams}
-            className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-none active:translate-y-[6px] transition-all">
-            Sudah? Lanjut!
+            disabled={isLoading}
+            className="w-full bg-[#2E9AD7] text-white font-bold text-[18px] py-3 rounded-2xl border-2 border-[#2e84b6] shadow-[0_6px_0_0_#1C6B99] hover:bg-[#268bc4] active:shadow-none active:translate-y-[6px] transition-all disabled:bg-[#546878] disabled:border-[#3A4A57] disabled:shadow-none disabled:translate-y-[6px]"
+          >
+            {isLoading ? "Memproses..." : "Sudah? Lanjut!"}
           </button>
         </div>
 

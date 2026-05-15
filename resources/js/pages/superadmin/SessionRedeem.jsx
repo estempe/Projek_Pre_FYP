@@ -28,7 +28,6 @@ const RedeemCardSuperadmin = ({ team, sessionStatus, onTukarClick }) => {
           ) : null}
         </div>
         
-        {/* LOGIKA BARU: Tombol Redeem HANYA mati kalau sudah ditukar. Sesi "ended" tidak lagi mematikan tombol */}
         {team.isRedeemed ? (
           <button disabled className="bg-[#b1b8c0] text-white font-bold text-[11px] px-4 py-2.5 rounded-lg cursor-not-allowed">
             Sudah Ditukar
@@ -239,7 +238,7 @@ export default function SessionRedeemSuperadmin() {
                   <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                 </div>
                 <h2 className="text-[18px] font-bold text-[#1D2B39] mb-3 leading-relaxed">Akhiri Seluruh<br />Permainan?</h2>
-                <p className="text-[#92A0AD] text-[12px] mb-8 px-2">Data pos akan diarsipkan dan peserta diarahkan ke halaman akhir. <br/><br/><span className="text-[#1D2B39] font-bold">Tombol Redeem akan tetap terbuka.</span></p>
+                <p className="text-[#92A0AD] text-[12px] mb-8 px-2">Data pos akan diarsipkan dan peserta diarahkan ke halaman akhir. <br/><br/><span className="text-[#1D2B39] font-bold"> Redeem akan tetap terbuka.</span></p>
                 <div className="w-full flex flex-col gap-3">
                   <button onClick={processCloseEvent} className="w-full bg-[#E53E3E] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#C53030] shadow-[0_4px_0_0_#9B2C2C] hover:bg-[#C53030] active:shadow-[0_0_0_0_#9B2C2C] active:translate-y-[4px] transition-all">
                     Ya, Akhiri Permainan

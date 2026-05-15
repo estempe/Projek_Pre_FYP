@@ -12,7 +12,6 @@ export default function JoinSession() {
     }
 
     try {
-      // Menggunakan rute relatif dengan header JSON yang ketat
       const res = await fetch("/api/check-session", {
         method: "POST",
         headers: {
@@ -25,8 +24,25 @@ export default function JoinSession() {
       const data = await res.json();
 
       if (res.ok && data.status === "found") {
+        const sessionStatus = data.data?.status;
+        
+        if (sessionStatus === "live") {
+          alert("Maaf, pendaftaran ditutup karena permainan sudah dimulai!");
+          return; // Hentikan fungsi di sini!
+        }
+        if (sessionStatus === "ended") {
+          alert("Sesi ini telah berakhir. Terima kasih telah berpartisipasi!");
+          return; // Hentikan fungsi di sini!
+        }
         navigate("/create-team", { state: { sessionCode } });
-      } else {
+      } 
+      else if (data.status === "session_started") {
+        alert("Maaf, pendaftaran ditutup karena permainan sudah dimulai!");
+      } 
+      else if (data.status === "session_ended") {
+        alert("Sesi ini telah berakhir. Terima kasih telah berpartisipasi!");
+      } 
+      else {
         alert("Sesi tidak ditemukan atau kode salah.");
       }
     } catch (error) {

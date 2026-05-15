@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+
 export default function WaitingRoom() {
-  
   const location = useLocation();
   const navigate = useNavigate();
-  const sessionCode = location.state?.sessionCode;
-  const nameTeam = location.state?.nameTeam;
-  
-  // 1. TANGKAP KODE RAHASIA DARI CREATE TEAM
-  const emergencyCode = location.state?.emergencyCode; 
-  
+
+  const savedUser = JSON.parse(localStorage.getItem("active_user")) || {};
+
+  const nameTeam = location.state?.nameTeam || savedUser.nameTeam || "Tim";
+  const sessionCode = location.state?.sessionCode || savedUser.sessionCode;
+  const emergencyCode = location.state?.emergencyCode || savedUser.emergencyCode;
+
   const [teams, setTeams] = useState([]);
 
   const fetchDataRealtime = async () => {
@@ -21,24 +22,27 @@ export default function WaitingRoom() {
 
       if (dataStatus.status === "live") {
         navigate("/gameplay", {
-          // 2. BAWA KODENYA KE HALAMAN GAMEPLAY!
           state: { sessionCode, nameTeam, emergencyCode },
         });
         return; 
       }
 
+      if (dataStatus.status === "ended") {
+        alert("Sesi permainan ini telah ditutup atau diakhiri.");
+        navigate("/");
+        return; 
+      }
 
-      // 2. Cek Daftar Tim (Apakah tim kita masih ada atau kena kick Admin?)
       const resTeams = await fetch(`/api/getTeams?session_code=${sessionCode}`, { 
           headers: { "Accept": "application/json" }
       });
       const dataTeams = await resTeams.json();
 
       if (Array.isArray(dataTeams)) {
-        // Cek apakah nama tim kita masih terdaftar di server
         const isTeamStillExists = dataTeams.some(team => team.name === nameTeam);
         
         if (!isTeamStillExists) {
+           localStorage.removeItem("active_user");
            alert("Tim kamu telah dihapus oleh Admin! Silakan daftar kembali.");
            navigate("/"); 
            return;
@@ -52,16 +56,31 @@ export default function WaitingRoom() {
   };
 
   useEffect(() => {
-    // Tendang ke depan jika masuk tanpa login
-    if (!sessionCode || !nameTeam) {
+    // kembaliin ke depan
+    if (!sessionCode || !nameTeam || nameTeam === "Tim") {
         navigate("/");
         return;
     }
 
-    fetchDataRealtime(); // Panggil pertama kali
-    const interval = setInterval(fetchDataRealtime, 3000); // Polling tiap 3 detik agar server aman
+    let isMounted = true;
+    let timeoutId;
+
+    const pollData = async () => {
+      if (!isMounted) return;
+      
+      await fetchDataRealtime(); 
+      
+      if (isMounted) {
+        timeoutId = setTimeout(pollData, 10000); 
+      }
+    };
+
+    pollData(); // Jalankan pertama kali
     
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [sessionCode, nameTeam, navigate]);
 
   return (

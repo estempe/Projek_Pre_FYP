@@ -10,7 +10,6 @@ export default function WaitingRoomSuperadmin() {
   const [teams, setTeams] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mengambil data sesi dan daftar tim secara real-time
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('auth_token');
@@ -38,10 +37,25 @@ export default function WaitingRoomSuperadmin() {
   };
 
   useEffect(() => {
-    fetchData();
-    // Auto-refresh tiap 3 detik 
-    const interval = setInterval(fetchData, 3000);
-    return () => clearInterval(interval);
+    let isMounted = true;
+    let timeoutId;
+
+    const pollData = async () => {
+      if (!isMounted) return;
+      
+      await fetchData(); 
+      
+      if (isMounted) {
+        timeoutId = setTimeout(pollData, 5000); 
+      }
+    };
+
+    pollData();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [id]);
 
   // Fungsi untuk KICK / DELETE Tim
@@ -58,7 +72,7 @@ export default function WaitingRoomSuperadmin() {
       
       const result = await response.json();
       if (response.ok && result.success) {
-        fetchData(); // Langsung refresh UI setelah sukses delete
+        fetchData(); 
       } else {
         alert("Gagal menghapus tim: " + result.message);
       }
@@ -67,7 +81,6 @@ export default function WaitingRoomSuperadmin() {
     }
   };
 
-  // Fungsi untuk Memulai Permainan
   const handleStartSession = async () => {
     try {
       const token = localStorage.getItem('auth_token');
@@ -123,7 +136,7 @@ export default function WaitingRoomSuperadmin() {
                   {/* Tombol X merah untuk Delete Tim */}
                   <button 
                     onClick={() => handleDeleteTeam(team.id, team.name)}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md hover:bg-red-600 z-10"
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-md hover:bg-red-600 z-10"
                   >
                     X
                   </button>

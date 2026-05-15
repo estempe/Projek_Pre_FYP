@@ -29,6 +29,11 @@ export default function RejoinSession() {
       }
       
       if (data.status === "found") {
+        localStorage.setItem("active_user", JSON.stringify({
+          sessionCode: sessionCode,
+          nameTeam: teamName,
+          emergencyCode: emergencyCode
+        }));
         navigate("/gameplay", { state: { nameTeam: teamName, sessionCode, emergencyCode } });
       } 
     } catch (error) {
@@ -74,7 +79,7 @@ export default function RejoinSession() {
               <input type="text" placeholder="Ketik kodenya disini!" value={sessionCode} onChange={(e) => setSessionCode(e.target.value)} className="w-full font-sans bg-transparent rounded-[18px] py-4 px-6 text-center text-lg text-white font-medium border-2 border-[#546878] focus:outline-none focus:ring-2 focus:ring-[#2E9AD7] transition-all" />
             </div>
 
-            {/* Input: Kode Darurat (Emergency) */}
+            {/* Input: Kode Emergency */}
             <div className="flex flex-col relative">
               <div className="w-fit mx-auto px-4 py-1.5 bg-[#E53E3E] rounded-t-[10px] flex justify-center items-center relative z-10 -mb-px">
                 <p className="text-[#FFFFFF] font-bold text-[13px]">Kode Darurat</p>

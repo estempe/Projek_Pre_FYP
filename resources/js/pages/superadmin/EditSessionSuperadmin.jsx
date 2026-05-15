@@ -93,7 +93,6 @@ export default function EditSessionSuperadmin() {
       payload.append('redeem_location', formData.redeem_location);
       payload.append('qr_link', formData.qr_link || '');
       
-      // PERBAIKAN: Gunakan 'qr_image' agar selaras dengan fungsi store dan update di Laravel
       if (qrFile) {
           payload.append('qr_image', qrFile); 
       }

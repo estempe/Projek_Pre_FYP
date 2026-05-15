@@ -21,6 +21,14 @@ class TeamController extends Controller
         $session = GameSession::where('session_code', strtoupper($request->session_code))->first();
 
         if ($session) {
+            // Tolak jika sesi sudah dimulai (live)
+            if ($session->status === 'live') {
+                return response()->json(['status' => 'session_started'], 200);
+            }
+            // Tolak jika sesi sudah berakhir (ended)
+            if ($session->status === 'ended') {
+                return response()->json(['status' => 'session_ended'], 200);
+            }
             return response()->json(['status' => 'found', 'data' => $session], 200);
         }
 
@@ -37,6 +45,14 @@ class TeamController extends Controller
         $session = GameSession::where('session_code', strtoupper($request->session_code))->first();
         if (!$session) {
             return response()->json(['status' => 'session_not_found'], 404);
+        }
+
+        // Keamanan tambahan: Cegah pembuatan tim jika acara sudah mulai
+        if ($session->status === 'live') {
+            return response()->json(['status' => 'session_started'], 400);
+        }
+        if ($session->status === 'ended') {
+            return response()->json(['status' => 'session_ended'], 400);
         }
 
         // Cek apakah nama tim sudah dipakai di sesi ini

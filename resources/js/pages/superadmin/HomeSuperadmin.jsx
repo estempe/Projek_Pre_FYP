@@ -8,11 +8,9 @@ export default function HomeSuperadmin() {
   const [endedSessions, setEndedSessions] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
   
-  // State untuk Modal Hapus
   const [modalState, setModalState] = useState('idle');
   const [selectedSessionId, setSelectedSessionId] = useState(null);
 
-  // PERBAIKAN: Hanya menampilkan tanggal tanpa jam
   const formatTanggal = (dateString) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
@@ -44,8 +42,7 @@ export default function HomeSuperadmin() {
   useEffect(() => {
     fetchSessions();
   }, []);
-
-  // --- LOGIKA HAPUS SESI ---
+  // hapus sesi
   const triggerDelete = (id) => {
     setSelectedSessionId(id);
     setModalState('confirm');

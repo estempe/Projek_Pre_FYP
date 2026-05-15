@@ -5,37 +5,36 @@ import CoinIcon from '../../assets/Coin3D.png';
 import HomeIcon from '../../assets/Home-Icon.svg';
 import TrophyIcon from '../../assets/Trophy-Icon.svg';
 
-const PostTimer = ({ checkInTime, maxDuration }) => {
-  const [timeLeft, setTimeLeft] = useState("00:00");
-
-  useEffect(() => {
-    if (!checkInTime || !maxDuration) return;
-    const interval = setInterval(() => {
-      const checkInMs = new Date(checkInTime.replace(' ', 'T')).getTime();
-      const parts = maxDuration.split(':').map(Number);
-      const durationMs = ((parts[0] * 3600) + (parts[1] * 60) + parts[2]) * 1000;
-      const endMs = checkInMs + durationMs;
-      const nowMs = new Date().getTime();
-      const diffSec = Math.floor((endMs - nowMs) / 1000);
-
-      if (diffSec <= 0) {
-        setTimeLeft("00:00");
-        clearInterval(interval);
-      } else {
-        const m = Math.floor(diffSec / 60).toString().padStart(2, '0');
-        const s = (diffSec % 60).toString().padStart(2, '0');
-        setTimeLeft(`${m}:${s}`);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [checkInTime, maxDuration]);
-
-  return <p className="text-[28px] font-bold text-[#1D2B39] leading-none">{timeLeft}</p>;
-};
-
-const TeamCard = ({ team, selectedPosId, onCheckInClick, onSelesaiClick }) => {
+const TeamCard = ({ team, selectedPosId, teamRoute, onCheckInClick, onSelesaiClick }) => {
   const currentPosData = team.posStatus ? team.posStatus[selectedPosId] : null;
   const state = currentPosData?.status || "locked"; 
+
+  let eligiblePosId = teamRoute.length > 0 ? teamRoute[0].id : null; 
+  let activePosId = null;   
+
+  for (let i = 0; i < teamRoute.length; i++) {
+    const pId = teamRoute[i].id;
+    const pStatus = team.posStatus?.[pId]?.status || "locked";
+
+    if (pStatus === "active") {
+      activePosId = pId;
+      eligiblePosId = pId;
+      break;
+    }
+
+    if (pStatus === "completed") {
+      if (i + 1 < teamRoute.length) {
+        eligiblePosId = teamRoute[i + 1].id;
+      } else {
+        eligiblePosId = null;
+      }
+    } else {
+      eligiblePosId = pId;
+      break; 
+    }
+  }
+
+  const isEligible = (selectedPosId === eligiblePosId);
 
   return (
     <div className="bg-white rounded-[20px] p-5 shadow-sm border border-white flex flex-col mb-4">
@@ -48,38 +47,43 @@ const TeamCard = ({ team, selectedPosId, onCheckInClick, onSelesaiClick }) => {
 
       {state === 'locked' && (
         <div className="flex justify-between items-center">
-          <p className="text-[#92A0AD] text-[12px]">Tim belum check-in</p>
-          <button 
-            onClick={() => onCheckInClick(team)} 
-            className="bg-[#E5A015] text-white font-bold text-[13px] px-6 py-2.5 rounded-lg shadow-md active:translate-y-[2px] transition-all"
-          >
-            Check In
-          </button>
+          <p className="text-[#92A0AD] text-[12px]">
+            {isEligible ? "Siap Check-In" : activePosId ? "Sedang di pos lain" : "Belum urutannya"}
+          </p>
+          
+          {isEligible ? (
+            <button 
+              onClick={() => onCheckInClick(team)} 
+              className="bg-[#E5A015] text-white font-bold text-[13px] px-6 py-2.5 rounded-lg shadow-md active:translate-y-[2px] transition-all"
+            >
+              Check In
+            </button>
+          ) : (
+            <button disabled className="bg-[#CBD5E1] text-white font-bold text-[13px] px-6 py-2.5 rounded-lg cursor-not-allowed">
+              Terkunci
+            </button>
+          )}
         </div>
       )}
 
       {state === 'active' && (
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
-            <p className="text-[#92A0AD] text-[12px] mb-1 font-semibold">Countdown</p>
-            <PostTimer checkInTime={currentPosData.check_in_time} maxDuration={currentPosData.max_duration} />
+            <p className="text-[#92A0AD] text-[12px] mb-1 font-semibold">Status</p>
+            <span className="font-mono bg-[#FFF1F2] text-[#E11D48] px-3 py-1 rounded text-[12px] font-bold border border-[#FECDD3]">Sedang Bermain</span>
           </div>
-          <button 
-            onClick={() => onSelesaiClick(team)} 
-            className="bg-[#2E9AD7] text-white font-bold text-[15px] px-8 py-3.5 rounded-[12px] border-2 border-[#2e84b6] shadow-[0_4px_0_0_#1C6B99] active:shadow-none active:translate-y-[4px] transition-all"
-          >
+          <button onClick={() => onSelesaiClick(team)} className="bg-[#2E9AD7] text-white font-bold text-[15px] px-8 py-3.5 rounded-[12px] border-2 border-[#2e84b6] shadow-[0_4px_0_0_#1C6B99] active:translate-y-[4px] transition-all">
             Selesai
           </button>
         </div>
       )}
 
-      {/* PERBAIKAN: Menambahkan Logo BeeCoin di Tampilan Selesai Dinilai untuk PIC */}
       {state === 'completed' && (
         <div className="flex justify-between items-center bg-[#F0FDF4] p-3 rounded-lg border border-[#DCFCE7]">
           <p className="text-[#166534] font-bold text-[13px]">Selesai Dinilai</p>
           <div className="flex items-center gap-1.5">
-            <img src={CoinIcon} alt="BeeCoin" className="w-4 h-4 object-contain drop-shadow-sm" />
-            <span className="text-[#1D2B39] font-extrabold text-[14px]">+{currentPosData.earnedCoins} BeeCoin</span>
+            <img src={CoinIcon} alt="BeeCoin" className="w-4 h-4 object-contain" />
+            <span className="text-[#1D2B39] font-extrabold text-[14px]">+{currentPosData.earnedCoins}</span>
           </div>
         </div>
       )}
@@ -117,10 +121,31 @@ export default function SessionLive() {
   };
 
   useEffect(() => {
-    fetchLiveData();
-    const interval = setInterval(fetchLiveData, 3000);
-    return () => clearInterval(interval);
+    let isMounted = true;
+    let timeoutId;
+
+    const pollData = async () => {
+      if (!isMounted) return;
+      await fetchLiveData(); 
+      if (isMounted) {
+        timeoutId = setTimeout(pollData, 30000); 
+      }
+    };
+
+    pollData(); 
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId); 
+    };
   }, [id, selectedPos]);
+
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setTimeLeftSec(prev => (prev === null || prev <= 0 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, []);
 
   const handleCheckIn = async (team) => {
     try {
@@ -130,8 +155,17 @@ export default function SessionLive() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ team_id: team.id, post_id: selectedPos.id })
       });
-      if (response.ok) await fetchLiveData(); 
-    } catch (e) { alert("Check-in gagal."); }
+      
+      const resData = await response.json();
+      
+      if (response.ok && resData.success) {
+        await fetchLiveData(); 
+      } else {
+        alert(resData.message || "Gagal melakukan Check In.");
+      }
+    } catch (e) { 
+      alert("Check-in gagal. Periksa koneksi internet."); 
+    }
   };
 
   const handleSaveScore = async () => {
@@ -161,14 +195,36 @@ export default function SessionLive() {
   return (
     <div className="min-h-screen bg-[#EBF2F8] pb-32">
       <div className="w-full max-w-md mx-auto px-6 pt-12">
-        {/* Tombol kembali diarahkan ke beranda PIC */}
-        <button onClick={() => navigate('/pic/home')} className="flex items-center gap-1.5 font-bold mb-8">
-           <img src={BackArrowDark} className="w-5 h-5" alt="Back" /> Beranda PIC
-        </button>
         
-        {/* DROPDOWN POS (Kanan Atas) */}
+        <div className="flex justify-between items-center mb-8">
+          <button onClick={() => navigate('/pic/home')} className="flex items-center gap-1.5 font-bold text-[#1D2B39]">
+             <img src={BackArrowDark} className="w-5 h-5" alt="Back" /> Beranda PIC
+          </button>
+
+          {sessionData?.status === 'ended' ? (
+            <button 
+              onClick={() => navigate(`/pic/session-redeem/${id}`)} 
+              className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#1C6B99] active:translate-y-[3px] active:shadow-none hover:bg-[#268bc4] transition-all"
+            >
+              Redeem Hadiah
+            </button>
+          ) : (
+            <button 
+              disabled 
+              className="bg-[#CBD5E1] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-sm cursor-not-allowed"
+            >
+              Redeem Terkunci
+            </button>
+          )}
+        </div>
+        
         <div className="flex justify-between items-center mb-10 mt-4 relative z-30">
-          <h1 className="text-[15px] font-bold text-[#1D2B39] w-[55%] leading-tight uppercase tracking-tight">{sessionData.name}</h1>
+          <div className="w-[55%] flex flex-col items-start gap-1">
+            <h1 className="text-[15px] font-bold text-[#1D2B39] leading-tight uppercase tracking-tight truncate w-full">
+              {sessionData.name}
+            </h1>
+          </div>
+
           <div className="relative" ref={dropdownRef}>
             <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="bg-white border border-[#CBD5E1] rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm text-[13px] font-bold text-[#92A0AD]">
               <span className="truncate max-w-[80px]">{selectedPos.name}</span>
@@ -194,18 +250,31 @@ export default function SessionLive() {
         </div>
 
         <div className="flex flex-col">
-          {teamsData.map((team) => (
-            <TeamCard 
-              key={`${team.id}-${selectedPos.id}-${team.posStatus?.[selectedPos.id]?.status}`} 
-              team={team} 
-              selectedPosId={selectedPos.id} 
-              onCheckInClick={handleCheckIn} 
-              onSelesaiClick={(t) => { setSelectedTeam(t); setModalState('scoring'); }} 
-            />
-          ))}
+          {teamsData.map((team) => {
+            const teamIdx = teamsData.findIndex(t => t.id === team.id);
+            const numPosts = sessionData.posts.length;
+            const chunkSize = Math.ceil(teamsData.length / numPosts) || 1;
+            const chunkIndex = Math.floor(teamIdx / chunkSize);
+
+            const teamRoute = [];
+            for(let stepIdx = 0; stepIdx < numPosts; stepIdx++) {
+              const postIdx = (chunkIndex + stepIdx) % numPosts;
+              teamRoute.push(sessionData.posts[postIdx]);
+            }
+
+            return (
+              <TeamCard 
+                key={`${team.id}-${selectedPos.id}-${team.posStatus?.[selectedPos.id]?.status}`} 
+                team={team} 
+                selectedPosId={selectedPos.id} 
+                teamRoute={teamRoute}
+                onCheckInClick={handleCheckIn} 
+                onSelesaiClick={(t) => { setSelectedTeam(t); setModalState('scoring'); }} 
+              />
+            );
+          })}
         </div>
 
-        {/* Modal Nilai */}
         {modalState === 'scoring' && (
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center px-6">
             <div className="w-full max-w-[340px] bg-white rounded-[24px] p-6 shadow-2xl flex flex-col items-center">
@@ -217,7 +286,6 @@ export default function SessionLive() {
                 className="w-full border rounded-xl py-4 text-center text-[24px] font-bold mb-6 outline-none focus:border-[#2E9AD7]" 
               />
               
-              {/* Tombol + dan - */}
               <div className="w-full grid grid-cols-2 gap-4 mb-6">
                 <button 
                   onClick={() => setScoreInput(String(Number(scoreInput || 0) - 5))} 

@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
-// --- IMPORT ASSETS ---
 import BackArrowDark from '../../assets/Back-Arrow-Icon-Dark.svg';
 import HomeIcon from '../../assets/Home-Icon.svg';
 
 export default function CreateSession() {
   const navigate = useNavigate();
 
-  // --- STATES ---
   const [sessionName, setSessionName] = useState('');
   const [sessionDate, setSessionDate] = useState('');
   const [sessionDuration, setSessionDuration] = useState('02:00');
@@ -20,14 +17,12 @@ export default function CreateSession() {
   const [qrFile, setQrFile] = useState(null);
   const [fileName, setFileName] = useState('');
 
-  // State untuk POS Dinamis
   const [posList, setPosList] = useState([
-    { id: Date.now(), name: '', location: '', duration: '00:00' }
+    { id: Date.now(), name: '', location: '' }
   ]);
 
-  // --- HANDLERS UNTUK POS ---
   const handleAddPos = () => {
-    setPosList([ ...posList, { id: Date.now(), name: '', location: '', duration: '00:00' } ]);
+    setPosList([ ...posList, { id: Date.now(), name: '', location: '' } ]);
   };
 
   const handleRemovePos = (idToRemove) => {
@@ -36,14 +31,12 @@ export default function CreateSession() {
     }
   };
 
-  // Fungsi baru untuk menangkap ketikan user di setiap input POS
   const handlePosChange = (id, field, value) => {
     setPosList(posList.map(pos => 
       pos.id === id ? { ...pos, [field]: value } : pos
     ));
   };
 
-  // --- HANDLER UNTUK FILE GAMBAR ---
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -52,7 +45,6 @@ export default function CreateSession() {
     }
   };
 
-  // --- FUNGSI SUBMIT (API CALL) ---
   const handleCreateSession = async (e) => {
     e.preventDefault(); 
 
@@ -69,7 +61,6 @@ export default function CreateSession() {
       if (qrLink) formData.append('qr_link', qrLink);
       if (qrFile) formData.append('qr_image', qrFile);
 
-      // KUNCI UTAMA: Mengirimkan daftar POS ke Laravel dalam bentuk teks JSON
       formData.append('pos_list', JSON.stringify(posList));
 
       const response = await fetch('/api/sessions', {
@@ -203,16 +194,7 @@ export default function CreateSession() {
                       className="w-full bg-white border border-[#CBD5E1] text-[#1D2B39] placeholder-[#92A0AD] text-[15px] rounded-[12px] px-4 py-3.5 focus:outline-none focus:border-[#2E9AD7]" 
                     />
                   </div>
-                  <div>
-                    <label className="block text-[14px] font-bold text-[#1D2B39] mb-1.5">Durasi Maks. Check In (Misi)</label>
-                    <input 
-                      type="time" 
-                      value={pos.duration}
-                      onChange={(e) => handlePosChange(pos.id, 'duration', e.target.value)}
-                      required
-                      className="w-full bg-white border border-[#CBD5E1] text-[#1D2B39] font-bold text-[15px] rounded-[12px] px-4 py-3.5 focus:outline-none focus:border-[#2E9AD7]" 
-                    />
-                  </div>
+                  {/* Input Durasi Maks Check In telah dihapus dari sini */}
                 </div>
               </div>
             ))}
