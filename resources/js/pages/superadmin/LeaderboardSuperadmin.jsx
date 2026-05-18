@@ -15,7 +15,8 @@ export default function LeaderboardSuperadmin() {
   const [sessionStatus, setSessionStatus] = useState('');
   const [modalState, setModalState] = useState('idle');
 
-  const fetchLeaderboardAndStatus = async (isPolling = false) => {
+  const fetchLeaderboard = async (isPolling = false) => {
+    if (!id) return;
     try {
       const token = localStorage.getItem('auth_token');
       
@@ -23,24 +24,20 @@ export default function LeaderboardSuperadmin() {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
       const dataLeaderboard = await resLeaderboard.json();
-      if (resLeaderboard.ok && dataLeaderboard.success) {
+      
+      if (dataLeaderboard.session_status) {
+        setSessionStatus(dataLeaderboard.session_status);
+      }
+
+      if (resLeaderboard.ok && (dataLeaderboard.success || dataLeaderboard.status === "success")) {
         setLeaderboardData((current) => {
           if (isPolling && current.length > 0) {
             prevLeaderboardRef.current = current;
-            sessionStorage.setItem(`lb_admin_${id}`, JSON.stringify(current));
+            try { sessionStorage.setItem(`lb_admin_${id}`, JSON.stringify(current)); } catch (e) {}
           }
           return dataLeaderboard.data;
         });
       }
-
-      const resSession = await fetch(`/api/sessions/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-      });
-      const dataSession = await resSession.json();
-      if (resSession.ok && dataSession.success) {
-        setSessionStatus(dataSession.data.status);
-      }
-
     } catch (error) {
     } finally {
       setIsLoading(false);
@@ -48,12 +45,21 @@ export default function LeaderboardSuperadmin() {
   };
 
   useEffect(() => {
+    if (!id) {
+      navigate('/superadmin/home');
+      return;
+    }
+
     let isMounted = true;
     let timeoutId;
 
     const pollData = async (isPolling) => {
       if (!isMounted) return;
-      await fetchLeaderboardAndStatus(isPolling);
+      
+      if (!document.hidden) {
+        await fetchLeaderboard(isPolling);
+      }
+      
       if (isMounted) {
         timeoutId = setTimeout(() => pollData(true), 30000); 
       }
@@ -64,7 +70,7 @@ export default function LeaderboardSuperadmin() {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [id]);
+  }, [id, navigate]);
 
   const processCloseEvent = async () => {
     try {

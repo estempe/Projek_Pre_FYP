@@ -22,16 +22,11 @@ export default function LeaderboardPIC() {
         const dataLeaderboard = await resLeaderboard.json();
         if (resLeaderboard.ok && dataLeaderboard.success) {
           setLeaderboardData(dataLeaderboard.data);
+          
+          if (dataLeaderboard.session_status) {
+             setSessionStatus(dataLeaderboard.session_status);
+          }
         }
-
-        const resSession = await fetch(`/api/sessions/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-        });
-        const sessionResult = await resSession.json();
-        if (resSession.ok && sessionResult.success) {
-          setSessionStatus(sessionResult.data.status);
-        }
-
       } catch (error) {
         console.error(error);
       } finally {
@@ -42,10 +37,13 @@ export default function LeaderboardPIC() {
     let isMounted = true;
     let timeoutId;
 
+
     const pollData = async () => {
       if (!isMounted) return;
       
-      await fetchLeaderboardAndStatus();
+      if (!document.hidden) {
+        await fetchLeaderboardAndStatus();
+      }
       
       if (isMounted) {
         timeoutId = setTimeout(pollData, 30000); 

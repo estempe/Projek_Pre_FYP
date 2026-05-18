@@ -61,22 +61,19 @@ export default function SessionRedeem() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('auth_token');
+      
       const resLeaderboard = await fetch(`/api/sessions/${id}/leaderboard`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const resSession = await fetch(`/api/sessions/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       const dataLeaderboard = await resLeaderboard.json();
-      const dataSession = await resSession.json();
 
       if (resLeaderboard.ok && dataLeaderboard.success) {
         setTeamsData(dataLeaderboard.data);
-      }
-      if (resSession.ok && dataSession.success) {
-        setSessionName(dataSession.data.name);
-        setSessionStatus(dataSession.data.status); 
+        
+        // Baca Nama dan Status Sesi dari payload baru Backend
+        if (dataLeaderboard.session_name) setSessionName(dataLeaderboard.session_name);
+        if (dataLeaderboard.session_status) setSessionStatus(dataLeaderboard.session_status);
       }
     } catch (error) {
       console.error("Gagal mengambil data:", error);

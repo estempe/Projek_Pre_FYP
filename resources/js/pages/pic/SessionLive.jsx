@@ -5,7 +5,7 @@ import CoinIcon from '../../assets/Coin3D.png';
 import HomeIcon from '../../assets/Home-Icon.svg';
 import TrophyIcon from '../../assets/Trophy-Icon.svg';
 
-const TeamCard = ({ team, selectedPosId, teamRoute, onCheckInClick, onSelesaiClick }) => {
+const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, onSelesaiClick }) => {
   const currentPosData = team.posStatus ? team.posStatus[selectedPosId] : null;
   const state = currentPosData?.status || "locked"; 
 
@@ -89,7 +89,7 @@ const TeamCard = ({ team, selectedPosId, teamRoute, onCheckInClick, onSelesaiCli
       )}
     </div>
   );
-};
+});
 
 export default function SessionLive() {
   const { id } = useParams();
@@ -126,7 +126,11 @@ export default function SessionLive() {
 
     const pollData = async () => {
       if (!isMounted) return;
-      await fetchLiveData(); 
+      
+      if (!document.hidden) {
+        await fetchLiveData(); 
+      }
+      
       if (isMounted) {
         timeoutId = setTimeout(pollData, 30000); 
       }
@@ -250,8 +254,8 @@ export default function SessionLive() {
         </div>
 
         <div className="flex flex-col">
-          {teamsData.map((team) => {
-            const teamIdx = teamsData.findIndex(t => t.id === team.id);
+          {teamsData.map((team, teamIdx) => {
+                        
             const numPosts = sessionData.posts.length;
             const chunkSize = Math.ceil(teamsData.length / numPosts) || 1;
             const chunkIndex = Math.floor(teamIdx / chunkSize);

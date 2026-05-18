@@ -10,25 +10,23 @@ export default function WaitingRoomSuperadmin() {
   const [teams, setTeams] = useState([]); 
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchTeamsAndStatus = async () => {
     try {
       const token = localStorage.getItem('auth_token');
       
-      // Ambil data sesi
-      const resSession = await fetch(`/api/sessions/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-      });
-      // Ambil daftar tim
       const resTeams = await fetch(`/api/sessions/${id}/leaderboard`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
-
-      const dataSession = await resSession.json();
       const dataTeams = await resTeams.json();
       
-      if (resSession.ok && dataSession.success) setSessionData(dataSession.data);
-      if (resTeams.ok && dataTeams.success) setTeams(dataTeams.data);
-
+      if (resTeams.ok && dataTeams.success) {
+        setSessionData({
+          name: dataTeams.session_name,
+          session_code: dataTeams.session_code,
+          status: dataTeams.session_status
+        });
+        setTeams(dataTeams.data);
+      }
     } catch (error) {
       console.error("Gagal mengambil data:", error);
     } finally {
@@ -43,7 +41,9 @@ export default function WaitingRoomSuperadmin() {
     const pollData = async () => {
       if (!isMounted) return;
       
-      await fetchData(); 
+      if (!document.hidden) {
+        await fetchTeamsAndStatus(); 
+      }
       
       if (isMounted) {
         timeoutId = setTimeout(pollData, 5000); 
@@ -72,7 +72,7 @@ export default function WaitingRoomSuperadmin() {
       
       const result = await response.json();
       if (response.ok && result.success) {
-        fetchData(); 
+        fetchTeamsAndStatus(); 
       } else {
         alert("Gagal menghapus tim: " + result.message);
       }

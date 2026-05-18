@@ -46,6 +46,7 @@ export default function HomePIC() {
   // Pisahkan sesi berdasarkan status
   const liveSessions = sessions.filter(s => s.status === 'live');
   const upcomingSessions = sessions.filter(s => s.status === 'upcoming');
+  const endedSessions = sessions.filter(s => s.status === 'ended'); // ✅ Menambahkan filter sesi yang sudah selesai
 
   const usernamePIC = localStorage.getItem('username') || "PIC";
 
@@ -69,13 +70,13 @@ export default function HomePIC() {
 
         {isLoading ? (
           <div className="flex-1 flex justify-center items-center">
-            <p className="text-[#92A0AD] font-bold">Memuat daftar sesi...</p>
+            <p className="text-[#92A0AD] font-bold animate-pulse">Memuat daftar sesi...</p>
           </div>
         ) : (
           <>
             {/* --- SECTION 1: SEDANG BERJALAN (LIVE) --- */}
             <div className="mb-10">
-              <h3 className="text-[18px] font-bold text-[#1D2B39] mb-4">Sesi Sedang Berjalan</h3>
+              <h3 className="text-[18px] font-bold text-[#1D2B39] mb-4 flex items-center gap-2"><span>⏳</span> Sesi Sedang Berjalan</h3>
               
               {liveSessions.length > 0 ? (
                 <div className="flex flex-col gap-4">
@@ -85,7 +86,7 @@ export default function HomePIC() {
                       <p className="text-[#92A0AD] text-[12px] font-medium mb-4">{formatTanggal(session.start_time)}</p>
                       <button 
                         onClick={() => navigate(`/pic/session-live/${session.id}`)}
-                        className="w-full bg-[#E5A015] text-white font-bold text-[14px] py-3 rounded-[12px] hover:bg-[#c98c12] transition-colors"
+                        className="w-full bg-[#E5A015] text-white font-bold text-[14px] py-3 rounded-[12px] hover:bg-[#c98c12] transition-colors shadow-sm active:translate-y-[2px]"
                       >
                         Masuk ke Sesi
                       </button>
@@ -100,8 +101,8 @@ export default function HomePIC() {
             </div>
 
             {/* --- SECTION 2: AKAN DATANG (UPCOMING) --- */}
-            <div className="mb-8">
-              <h3 className="text-[18px] font-bold text-[#1D2B39] mb-4">Sesi Akan Datang</h3>
+            <div className="mb-10">
+              <h3 className="text-[18px] font-bold text-[#1D2B39] mb-4 flex items-center gap-2"><span>⌚</span> Sesi Akan Datang</h3>
               
               {upcomingSessions.length > 0 ? (
                 <div className="flex flex-col gap-4">
@@ -110,7 +111,6 @@ export default function HomePIC() {
                       <h4 className="text-[16px] font-bold text-[#1D2B39] mb-1 truncate">{session.name}</h4>
                       <p className="text-[#92A0AD] text-[12px] font-medium mb-4">{formatTanggal(session.start_time)}</p>
                       <div className="flex gap-3">
-                        {/* Tombol ke halaman Session Detail PIC */}
                         <button 
                           onClick={() => navigate(`/pic/session-detail/${session.id}`)}
                           className="flex-1 bg-white border-2 border-[#1D2B39] text-[#1D2B39] font-bold text-[13px] py-2.5 rounded-[10px] hover:bg-gray-50 transition-colors"
@@ -127,6 +127,45 @@ export default function HomePIC() {
                 </div>
               )}
             </div>
+
+            {/* --- SECTION 3: SUDAH SELESAI (ENDED / REDEEM) --- */}
+            <div className="mb-8">
+              <h3 className="text-[18px] font-bold text-[#1D2B39] mb-4 flex items-center gap-2"><span>✅</span> Sesi yang Sudah Lewat</h3>
+              
+              {endedSessions.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {endedSessions.map(session => (
+                    <div key={session.id} className="bg-[#E4E9EF]/50 rounded-[20px] p-5 shadow-sm border border-[#CBD5E1]">
+                      <div className="flex justify-between items-start mb-4">
+                        <h4 className="text-[16px] font-bold text-[#546878] mb-1 truncate line-through opacity-70 w-[70%]">{session.name}</h4>
+                        <span className="bg-[#CBD5E1] text-[#1D2B39] text-[11px] font-bold px-3 py-1 rounded-full">Selesai</span>
+                      </div>
+                      <p className="text-[#92A0AD] text-[12px] font-medium mb-4">{formatTanggal(session.start_time)}</p>
+                      
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => navigate(`/pic/leaderboard/${session.id}`)}
+                          className="flex-1 bg-white border border-[#CBD5E1] text-[#546878] font-bold text-[12px] py-2.5 rounded-[10px] hover:bg-gray-50 transition-colors"
+                        >
+                          Leaderboard
+                        </button>
+                        <button 
+                          onClick={() => navigate(`/pic/session-redeem/${session.id}`)}
+                          className="flex-1 bg-[#2E9AD7] text-white font-bold text-[12px] py-2.5 rounded-[10px] border-2 border-[#2e84b6] shadow-[0_3px_0_0_#1C6B99] active:translate-y-[3px] active:shadow-none hover:bg-[#268bc4] transition-all"
+                        >
+                          Kasir Redeem
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white border border-dashed border-[#CBD5E1] rounded-[20px] p-6 text-center">
+                  <p className="text-[#92A0AD] text-[13px] font-medium">Belum ada riwayat sesi yang selesai.</p>
+                </div>
+              )}
+            </div>
+
           </>
         )}
 

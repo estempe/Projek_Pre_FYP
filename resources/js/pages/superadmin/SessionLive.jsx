@@ -5,7 +5,7 @@ import CoinIcon from '../../assets/Coin3D.png';
 import HomeIcon from '../../assets/Home-Icon.svg';
 import TrophyIcon from '../../assets/Trophy-Icon.svg';
 
-const TeamCard = ({ team, selectedPosId, teamRoute, onCheckInClick, onSelesaiClick }) => {
+const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, onSelesaiClick }) => {
   const currentPosData = team.posStatus ? team.posStatus[selectedPosId] : null;
   const state = currentPosData?.status || "locked"; 
 
@@ -89,7 +89,7 @@ const TeamCard = ({ team, selectedPosId, teamRoute, onCheckInClick, onSelesaiCli
       )}
     </div>
   );
-};
+});
 
 export default function SessionLiveSuperadmin() {
   const { id } = useParams();
@@ -124,13 +124,23 @@ export default function SessionLiveSuperadmin() {
   useEffect(() => {
     let isMounted = true;
     let timeoutId;
+    
     const pollData = async () => {
       if (!isMounted) return;
-      await fetchLiveData();
+      
+      if (!document.hidden) {
+        await fetchLiveData();
+      }
+      
       if (isMounted) timeoutId = setTimeout(pollData, 30000); 
     };
+    
     pollData();
-    return () => { isMounted = false; clearTimeout(timeoutId); };
+    
+    return () => { 
+      isMounted = false; 
+      clearTimeout(timeoutId); 
+    };
   }, [id, selectedPos]);
 
   useEffect(() => {
@@ -222,7 +232,6 @@ export default function SessionLiveSuperadmin() {
         <div className="flex justify-between items-center mb-8 relative z-30">
           <div className="w-[55%] flex flex-col items-start gap-1">
             <h1 className="text-[14px] lg:text-[18px] font-bold text-[#1D2B39] truncate w-full">{sessionData.name}</h1>
-            <p className="text-[10px] text-[#92A0AD] font-medium italic">Auto-refresh aktif (30s)</p>
           </div>
           <div className="relative" ref={dropdownRef}>
             <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="bg-white border border-[#CBD5E1] rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm text-[12px] font-bold text-[#92A0AD]">
@@ -250,7 +259,7 @@ export default function SessionLiveSuperadmin() {
           <div className="mb-4">
             <input 
               type="text" 
-              placeholder="🔍 Cari nama tim..." 
+              placeholder="Cari nama tim..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white border border-[#CBD5E1] rounded-[16px] py-3 px-4 text-[14px] text-[#1D2B39] placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] shadow-sm transition-colors"
@@ -261,6 +270,7 @@ export default function SessionLiveSuperadmin() {
             {filteredTeams.length > 0 ? (
               filteredTeams.map((team) => {
                 const teamIdx = teamsData.findIndex(t => t.id === team.id);
+                
                 const numPosts = sessionData.posts.length;
                 const chunkSize = Math.ceil(teamsData.length / numPosts) || 1;
                 const chunkIndex = Math.floor(teamIdx / chunkSize);
@@ -273,7 +283,7 @@ export default function SessionLiveSuperadmin() {
 
                 return (
                   <TeamCard 
-                    key={`${team.id}-${selectedPos.id}`} 
+                    key={`${team.id}-${selectedPos.id}-${team.posStatus?.[selectedPos.id]?.status}`} 
                     team={team} 
                     selectedPosId={selectedPos.id} 
                     teamRoute={teamRoute}
@@ -286,7 +296,7 @@ export default function SessionLiveSuperadmin() {
               <p className="text-center text-[#92A0AD] text-[13px] py-6">Tim tidak ditemukan.</p>
             )}
           </div>
-        </div>
+        </div> 
 
         <div className="mt-10 mb-10">
           <h2 className="text-[17px] font-bold text-[#1D2B39] mb-4 flex items-center gap-2">
