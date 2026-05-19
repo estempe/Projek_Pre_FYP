@@ -7,10 +7,10 @@ import TrophyIcon from '../../assets/Trophy-Icon.svg';
 
 const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, onSelesaiClick }) => {
   const currentPosData = team.posStatus ? team.posStatus[selectedPosId] : null;
-  const state = currentPosData?.status || "locked"; 
+  const state = currentPosData?.status || "locked";
 
-  let eligiblePosId = teamRoute.length > 0 ? teamRoute[0].id : null; 
-  let activePosId = null;   
+  let eligiblePosId = teamRoute.length > 0 ? teamRoute[0].id : null;
+  let activePosId = null;
 
   for (let i = 0; i < teamRoute.length; i++) {
     const pId = teamRoute[i].id;
@@ -30,7 +30,7 @@ const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, o
       }
     } else {
       eligiblePosId = pId;
-      break; 
+      break;
     }
   }
 
@@ -42,7 +42,7 @@ const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, o
         <h3 className="text-[16px] font-bold text-[#1D2B39] leading-tight mb-1">{team.name}</h3>
         <p className="text-[#92A0AD] text-[11px] font-medium leading-none">{team.major}</p>
       </div>
-      
+
       <hr className="border-[#F1F5F9] mb-4" />
 
       {state === 'locked' && (
@@ -50,10 +50,10 @@ const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, o
           <p className="text-[#92A0AD] text-[12px]">
             {isEligible ? "Siap Check-In" : activePosId ? "Sedang di pos lain" : "Belum urutannya"}
           </p>
-          
+
           {isEligible ? (
-            <button 
-              onClick={() => onCheckInClick(team)} 
+            <button
+              onClick={() => onCheckInClick(team)}
               className="bg-[#E5A015] text-white font-bold text-[13px] px-6 py-2.5 rounded-lg shadow-md active:translate-y-[2px] transition-all"
             >
               Check In
@@ -97,10 +97,10 @@ export default function SessionLive() {
   const [sessionData, setSessionData] = useState(null);
   const [teamsData, setTeamsData] = useState([]);
   const [selectedPos, setSelectedPos] = useState(null);
-  const [timeLeftSec, setTimeLeftSec] = useState(null); 
+  const [timeLeftSec, setTimeLeftSec] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const [modalState, setModalState] = useState('idle'); 
+  const [modalState, setModalState] = useState('idle');
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [scoreInput, setScoreInput] = useState('');
 
@@ -126,21 +126,21 @@ export default function SessionLive() {
 
     const pollData = async () => {
       if (!isMounted) return;
-      
+
       if (!document.hidden) {
-        await fetchLiveData(); 
+        await fetchLiveData();
       }
-      
+
       if (isMounted) {
-        timeoutId = setTimeout(pollData, 30000); 
+        timeoutId = setTimeout(pollData, 30000);
       }
     };
 
-    pollData(); 
+    pollData();
 
     return () => {
       isMounted = false;
-      clearTimeout(timeoutId); 
+      clearTimeout(timeoutId);
     };
   }, [id, selectedPos]);
 
@@ -159,16 +159,16 @@ export default function SessionLive() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ team_id: team.id, post_id: selectedPos.id })
       });
-      
+
       const resData = await response.json();
-      
+
       if (response.ok && resData.success) {
-        await fetchLiveData(); 
+        await fetchLiveData();
       } else {
         alert(resData.message || "Gagal melakukan Check In.");
       }
-    } catch (e) { 
-      alert("Check-in gagal. Periksa koneksi internet."); 
+    } catch (e) {
+      alert("Check-in gagal. Periksa koneksi internet.");
     }
   };
 
@@ -199,29 +199,20 @@ export default function SessionLive() {
   return (
     <div className="min-h-screen bg-[#EBF2F8] pb-32">
       <div className="w-full max-w-md mx-auto px-6 pt-12">
-        
+
         <div className="flex justify-between items-center mb-8">
           <button onClick={() => navigate('/pic/home')} className="flex items-center gap-1.5 font-bold text-[#1D2B39]">
-             <img src={BackArrowDark} className="w-5 h-5" alt="Back" /> Beranda PIC
+            <img src={BackArrowDark} className="w-5 h-5" alt="Back" /> Beranda PIC
           </button>
 
-          {sessionData?.status === 'ended' ? (
-            <button 
-              onClick={() => navigate(`/pic/session-redeem/${id}`)} 
-              className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#1C6B99] active:translate-y-[3px] active:shadow-none hover:bg-[#268bc4] transition-all"
-            >
-              Redeem Hadiah
-            </button>
-          ) : (
-            <button 
-              disabled 
-              className="bg-[#CBD5E1] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-sm cursor-not-allowed"
-            >
-              Redeem Terkunci
-            </button>
-          )}
+          <button
+            onClick={() => navigate(`/pic/session-redeem/${id}`)}
+            className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#1C6B99] active:translate-y-[3px] active:shadow-none hover:bg-[#268bc4] transition-all"
+          >
+            {sessionData?.status === 'ended' ? 'Redeem Hadiah' : 'Redeem (Tim Selesai)'}
+          </button>
         </div>
-        
+
         <div className="flex justify-between items-center mb-10 mt-4 relative z-30">
           <div className="w-[55%] flex flex-col items-start gap-1">
             <h1 className="text-[15px] font-bold text-[#1D2B39] leading-tight uppercase tracking-tight truncate w-full">
@@ -255,25 +246,25 @@ export default function SessionLive() {
 
         <div className="flex flex-col">
           {teamsData.map((team, teamIdx) => {
-                        
+
             const numPosts = sessionData.posts.length;
             const chunkSize = Math.ceil(teamsData.length / numPosts) || 1;
             const chunkIndex = Math.floor(teamIdx / chunkSize);
 
             const teamRoute = [];
-            for(let stepIdx = 0; stepIdx < numPosts; stepIdx++) {
+            for (let stepIdx = 0; stepIdx < numPosts; stepIdx++) {
               const postIdx = (chunkIndex + stepIdx) % numPosts;
               teamRoute.push(sessionData.posts[postIdx]);
             }
 
             return (
-              <TeamCard 
-                key={`${team.id}-${selectedPos.id}-${team.posStatus?.[selectedPos.id]?.status}`} 
-                team={team} 
-                selectedPosId={selectedPos.id} 
+              <TeamCard
+                key={`${team.id}-${selectedPos.id}-${team.posStatus?.[selectedPos.id]?.status}`}
+                team={team}
+                selectedPosId={selectedPos.id}
                 teamRoute={teamRoute}
-                onCheckInClick={handleCheckIn} 
-                onSelesaiClick={(t) => { setSelectedTeam(t); setModalState('scoring'); }} 
+                onCheckInClick={handleCheckIn}
+                onSelesaiClick={(t) => { setSelectedTeam(t); setModalState('scoring'); }}
               />
             );
           })}
@@ -283,30 +274,30 @@ export default function SessionLive() {
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center px-6">
             <div className="w-full max-w-[340px] bg-white rounded-[24px] p-6 shadow-2xl flex flex-col items-center">
               <h2 className="text-[18px] font-bold mb-6 text-[#1D2B39]">Beri BeeCoin: {selectedTeam?.name}</h2>
-              <input 
-                type="number" 
-                value={scoreInput} 
-                onChange={(e) => setScoreInput(e.target.value)} 
-                className="w-full border rounded-xl py-4 text-center text-[24px] font-bold mb-6 outline-none focus:border-[#2E9AD7]" 
+              <input
+                type="number"
+                value={scoreInput}
+                onChange={(e) => setScoreInput(e.target.value)}
+                className="w-full border rounded-xl py-4 text-center text-[24px] font-bold mb-6 outline-none focus:border-[#2E9AD7]"
               />
-              
+
               <div className="w-full grid grid-cols-2 gap-4 mb-6">
-                <button 
-                  onClick={() => setScoreInput(String(Number(scoreInput || 0) - 5))} 
+                <button
+                  onClick={() => setScoreInput(String(Number(scoreInput || 0) - 5))}
                   className="bg-[#202E3C] text-white font-bold text-[22px] py-3 rounded-xl hover:bg-[#16212c]"
                 >
                   -
                 </button>
-                <button 
-                  onClick={() => setScoreInput(String(Number(scoreInput || 0) + 5))} 
+                <button
+                  onClick={() => setScoreInput(String(Number(scoreInput || 0) + 5))}
                   className="bg-[#202E3C] text-white font-bold text-[22px] py-3 rounded-xl hover:bg-[#16212c]"
                 >
                   +
                 </button>
               </div>
 
-              <button 
-                onClick={handleSaveScore} 
+              <button
+                onClick={handleSaveScore}
                 className="w-full bg-[#2E9AD7] text-white font-bold py-4 rounded-xl shadow-lg hover:bg-[#268bc4]"
               >
                 Simpan & Selesaikan

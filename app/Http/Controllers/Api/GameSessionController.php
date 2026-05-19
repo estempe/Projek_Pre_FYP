@@ -270,16 +270,39 @@ class GameSessionController extends Controller
     public function redeemCoins(Request $request, $id)
     {
         $request->validate(['team_id' => 'required', 'amount' => 'required|numeric|min:1']);
-        $team = \App\Models\Team::where('game_session_id', $id)->where('id', $request->team_id)->first();
-        if (!$team) return response()->json(['success' => false, 'message' => 'Tim tidak ditemukan'], 404);
-        if ($team->total_coins < $request->amount) return response()->json(['success' => false, 'message' => 'Koin tim tidak mencukupi!'], 400);
+        return DB::transaction(function () use ($request, $id) {
+            $session = GameSession::select('id', 'status')->find($id);
+            if (!$session) return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
 
-        $team->total_coins -= $request->amount;
-        $team->redeemed_amount += $request->amount;
-        $team->is_redeemed = true;
-        $team->save();
+            $team = \App\Models\Team::where('game_session_id', $id)
+                ->where('id', $request->team_id)
+                ->lockForUpdate()
+                ->first();
 
-        return response()->json(['success' => true, 'message' => 'Koin berhasil ditukar!']);
+            if (!$team) return response()->json(['success' => false, 'message' => 'Tim tidak ditemukan'], 404);
+
+            if ($session->status !== 'ended') {
+                $totalPosts = Post::where('game_session_id', $id)->count();
+                $completedPosts = \App\Models\TeamPost::where('team_id', $team->id)
+                    ->where('status', 'completed')
+                    ->count();
+
+                if ($totalPosts > 0 && $completedPosts < $totalPosts) {
+                    return response()->json(['success' => false, 'message' => 'Tim belum menyelesaikan semua pos.'], 400);
+                }
+            }
+
+            if ($team->total_coins < $request->amount) {
+                return response()->json(['success' => false, 'message' => 'Koin tim tidak mencukupi!'], 400);
+            }
+
+            $team->total_coins -= $request->amount;
+            $team->redeemed_amount += $request->amount;
+            $team->is_redeemed = true;
+            $team->save();
+
+            return response()->json(['success' => true, 'message' => 'Koin berhasil ditukar!']);
+        });
     }
 
     public function update(Request $request, $id)

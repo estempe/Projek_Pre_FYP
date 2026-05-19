@@ -7,11 +7,11 @@ import TrophyIcon from "../../assets/Trophy-Icon.svg";
 export default function LeaderboardSuperadmin() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const prevLeaderboardRef = useRef(JSON.parse(sessionStorage.getItem(`lb_admin_${id}`)) || []);
-  
+
   const [sessionStatus, setSessionStatus] = useState('');
   const [modalState, setModalState] = useState('idle');
 
@@ -19,12 +19,12 @@ export default function LeaderboardSuperadmin() {
     if (!id) return;
     try {
       const token = localStorage.getItem('auth_token');
-      
+
       const resLeaderboard = await fetch(`/api/sessions/${id}/leaderboard`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
       const dataLeaderboard = await resLeaderboard.json();
-      
+
       if (dataLeaderboard.session_status) {
         setSessionStatus(dataLeaderboard.session_status);
       }
@@ -33,7 +33,7 @@ export default function LeaderboardSuperadmin() {
         setLeaderboardData((current) => {
           if (isPolling && current.length > 0) {
             prevLeaderboardRef.current = current;
-            try { sessionStorage.setItem(`lb_admin_${id}`, JSON.stringify(current)); } catch (e) {}
+            try { sessionStorage.setItem(`lb_admin_${id}`, JSON.stringify(current)); } catch (e) { }
           }
           return dataLeaderboard.data;
         });
@@ -55,13 +55,13 @@ export default function LeaderboardSuperadmin() {
 
     const pollData = async (isPolling) => {
       if (!isMounted) return;
-      
+
       if (!document.hidden) {
         await fetchLeaderboard(isPolling);
       }
-      
+
       if (isMounted) {
-        timeoutId = setTimeout(() => pollData(true), 30000); 
+        timeoutId = setTimeout(() => pollData(true), 30000);
       }
     };
 
@@ -83,33 +83,32 @@ export default function LeaderboardSuperadmin() {
       if (response.ok && result.success) {
         alert("Permainan resmi ditutup!");
         setSessionStatus('ended');
-        setModalState('idle'); 
+        setModalState('idle');
       }
-    } catch (error) {}
+    } catch (error) { }
   };
 
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-32">
       <div className="w-full max-w-md lg:max-w-6xl xl:max-w-7xl mx-auto min-h-screen flex flex-col relative">
-        
+
         <div className="pt-12 px-6 flex justify-between items-center mb-8">
-           <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"></path></svg>
             Kembali
           </button>
-          
+
           <div className="flex items-center gap-2">
             {sessionStatus !== 'ended' && (
               <button onClick={() => setModalState('end_event')} className="bg-[#E53E3E] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#B91C1C] active:translate-y-[3px] active:shadow-none transition-all">
                 Akhiri Sesi
               </button>
             )}
-            <button 
-              onClick={() => sessionStatus === 'ended' && navigate(`/superadmin/session/redeem/${id}`)}
-              disabled={sessionStatus !== 'ended'}
-              className={`${sessionStatus === 'ended' ? 'bg-[#2E9AD7] shadow-[0_3px_0_0_#1C6B99] active:translate-y-[3px] active:shadow-none' : 'bg-[#CBD5E1] cursor-not-allowed'} text-white text-[12px] font-bold px-4 py-2 rounded-lg transition-all`}
+            <button
+              onClick={() => navigate(`/superadmin/session/redeem/${id}`)}
+              className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#1C6B99] active:translate-y-[3px] active:shadow-none transition-all"
             >
-              {sessionStatus === 'ended' ? 'Redeem Hadiah' : 'Redeem Terkunci'}
+              {sessionStatus === 'ended' ? 'Redeem Hadiah' : 'Redeem (Tim Selesai)'}
             </button>
           </div>
         </div>
@@ -120,12 +119,12 @@ export default function LeaderboardSuperadmin() {
 
         <div className="px-6 lg:px-12 flex flex-col gap-3 lg:gap-4 w-full">
           {isLoading ? <p className="text-center text-[#92A0AD] font-semibold mt-10 animate-pulse">Memuat klasemen...</p> : leaderboardData.length === 0 ? <p className="text-center text-[#92A0AD] font-semibold mt-10">Belum ada tim.</p> : null}
-          
+
           {leaderboardData.map((team) => {
             const currentRank = team.rank;
             const prevTeam = prevLeaderboardRef.current.find(t => t.id === team.id);
             let trend = null;
-            
+
             if (prevTeam && prevLeaderboardRef.current.length > 0) {
               if (currentRank < prevTeam.rank) trend = 'up';
               else if (currentRank > prevTeam.rank) trend = 'down';
@@ -144,7 +143,7 @@ export default function LeaderboardSuperadmin() {
                     #{currentRank}
                   </span>
                 </div>
-                
+
                 <div className="flex-1 flex flex-col justify-center min-w-0 pr-4 lg:pr-8 border-l border-[#F1F5F9] pl-3 lg:pl-6 ml-2 lg:ml-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="text-[#02101B] text-[14px] lg:text-[18px] font-bold truncate">{team.name}</p>
@@ -178,7 +177,7 @@ export default function LeaderboardSuperadmin() {
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               </div>
               <h2 className="text-[18px] font-bold text-[#1D2B39] mb-3">Akhiri Seluruh<br />Permainan?</h2>
-              <p className="text-[#92A0AD] text-[12px] mb-8">Data pos tim akan diarsipkan. <br/><span className="text-[#1D2B39] font-bold">Tombol Redeem akan terbuka setelah ini.</span></p>
+              <p className="text-[#92A0AD] text-[12px] mb-8">Data pos tim akan diarsipkan. <br /><span className="text-[#1D2B39] font-bold">Redeem tetap bisa dilakukan untuk tim yang sudah selesai.</span></p>
               <div className="w-full flex flex-col gap-3">
                 <button onClick={processCloseEvent} className="w-full bg-[#E53E3E] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#C53030] shadow-[0_4px_0_0_#9B2C2C] active:shadow-none active:translate-y-[4px] transition-all">Ya, Akhiri Permainan</button>
                 <button onClick={() => setModalState('idle')} className="w-full bg-white text-[#1D2B39] font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#1D2B39] hover:bg-gray-50 transition-all">Batal</button>

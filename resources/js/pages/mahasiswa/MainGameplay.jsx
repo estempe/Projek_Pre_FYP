@@ -11,7 +11,7 @@ import TrophyIcon from "../../assets/Trophy-Icon.svg";
 export default function MainGameplay() {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const savedUser = JSON.parse(localStorage.getItem("active_user")) || {};
 
   const namaTeam = location.state?.nameTeam || savedUser.nameTeam || "Tim";
@@ -28,7 +28,7 @@ export default function MainGameplay() {
   const [emergencyCode, setEmergencyCode] = useState(
     initialEmergencyCode || getCache().emergencyCode || "KODE_TIDAK_DITEMUKAN"
   );
-  
+
   const timeoutRef = useRef(null);
 
   function goToLeaderboard() {
@@ -36,14 +36,14 @@ export default function MainGameplay() {
   }
 
   function goToRecovery() {
-    navigate("/recovery", { 
-      state: { sessionCode, nameTeam: namaTeam, emergencyCode: emergencyCode } 
+    navigate("/recovery", {
+      state: { sessionCode, nameTeam: namaTeam, emergencyCode: emergencyCode }
     });
   }
 
   const fetchAllData = async () => {
     if (!sessionCode || !namaTeam || namaTeam === "Tim") return;
-    
+
     try {
       const response = await fetch("/api/student-sync", {
         method: "POST",
@@ -56,6 +56,9 @@ export default function MainGameplay() {
       if (data.status === "upcoming") return navigate("/waiting", { state: { sessionCode, nameTeam: namaTeam, emergencyCode: emergencyCode } });
 
       if (data.success) {
+        const allCompleted = Array.isArray(data.posts) && data.posts.length > 0 && data.posts.every((pos) => pos.status === "completed");
+        if (allCompleted) return navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
+
         setCoins(data.team.total_coins);
         setPosts(data.posts);
         setSessionInfo(data.sessionInfo);
@@ -66,54 +69,54 @@ export default function MainGameplay() {
           posts: data.posts, coins: data.team.total_coins, sessionInfo: data.sessionInfo, timeLeftSec: data.remaining_seconds, emergencyCode: data.team.emergency_code
         }));
       }
-    } catch (error) {}
+    } catch (error) { }
   };
 
 
   useEffect(() => {
     if (!sessionCode || !namaTeam || namaTeam === "Tim") return navigate("/");
-    
+
     let isMounted = true;
     const autoPollData = async () => {
       if (!isMounted) return;
-      
+
       if (!document.hidden) {
         await fetchAllData();
       }
-      if (isMounted) timeoutRef.current = setTimeout(autoPollData, 60000); 
+      if (isMounted) timeoutRef.current = setTimeout(autoPollData, 60000);
     };
-    
+
     autoPollData(); // Jalankan pertama kali saat masuk
-    
+
     return () => {
       isMounted = false;
       clearTimeout(timeoutRef.current);
     };
-  }, [sessionCode, namaTeam]); 
+  }, [sessionCode, namaTeam]);
 
   useEffect(() => {
     if (!sessionCode) return;
-    
+
     let isMounted = true;
     let statusTimeoutId;
 
     const fastStatusCheck = async () => {
       if (!isMounted) return;
-      
+
       if (!document.hidden) {
         try {
-          const res = await fetch(`/api/session-status/${sessionCode}`, { 
-              headers: { "Accept": "application/json" } 
+          const res = await fetch(`/api/session-status/${sessionCode}`, {
+            headers: { "Accept": "application/json" }
           });
           const data = await res.json();
-          
+
           if (data.status === "ended") {
             navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
             return; // Hentikan jika sudah ditutup
           }
-        } catch (error) {}
+        } catch (error) { }
       }
-      
+
       if (isMounted) statusTimeoutId = setTimeout(fastStatusCheck, 15000);
     };
 
@@ -152,7 +155,7 @@ export default function MainGameplay() {
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-28">
       <div className="w-full max-w-md min-h-screen flex flex-col relative">
-                <div className="flex flex-col items-center pt-12">
+        <div className="flex flex-col items-center pt-12">
           <p className="text-[#8C9BA5] text-[15px] font-bold mb-2 tracking-wide uppercase">
             Halo, <span className="text-[#02101B]">{namaTeam}</span> 👋
           </p>
@@ -181,7 +184,7 @@ export default function MainGameplay() {
           </div>
 
           <button onClick={goToRecovery} className="w-full bg-[#1D2A34] text-white py-3.5 rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform">
-             Akses Cadangan Tim
+            Akses Cadangan Tim
           </button>
         </div>
 

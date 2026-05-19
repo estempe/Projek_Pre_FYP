@@ -7,6 +7,8 @@ import HomeIcon from '../../assets/Home-Icon.svg';
 import TrophyIcon from '../../assets/Trophy-Icon.svg';
 
 const RedeemCardSuperadmin = ({ team, sessionStatus, onTukarClick }) => {
+  const isFinished = team.isFinished || team.is_finished;
+  const canRedeem = !team.isRedeemed && (sessionStatus === 'ended' || isFinished);
   return (
     <div className="bg-white rounded-[20px] p-5 shadow-sm border border-white flex flex-col mb-4 relative z-10">
       <div className="mb-4">
@@ -27,13 +29,17 @@ const RedeemCardSuperadmin = ({ team, sessionStatus, onTukarClick }) => {
             </div>
           ) : null}
         </div>
-        
+
         {team.isRedeemed ? (
           <button disabled className="bg-[#b1b8c0] text-white font-bold text-[11px] px-4 py-2.5 rounded-lg cursor-not-allowed">
             Sudah Ditukar
           </button>
+        ) : !canRedeem ? (
+          <button disabled className="bg-[#CBD5E1] text-white font-bold text-[11px] px-4 py-2.5 rounded-lg cursor-not-allowed">
+            Belum Selesai
+          </button>
         ) : (
-          <button 
+          <button
             onClick={() => onTukarClick(team)}
             className="bg-[#E5A015] text-white font-bold text-[12px] px-5 py-2.5 rounded-lg border border-[#D48A10] shadow-[0_3px_0_0_#B47608] hover:bg-[#d89613] active:shadow-[0_0px_0_0_#B47608] active:translate-y-[3px] transition-all"
           >
@@ -48,13 +54,13 @@ const RedeemCardSuperadmin = ({ team, sessionStatus, onTukarClick }) => {
 export default function SessionRedeemSuperadmin() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [sessionName, setSessionName] = useState('Memuat Sesi...');
-  const [sessionStatus, setSessionStatus] = useState(''); 
+  const [sessionStatus, setSessionStatus] = useState('');
   const [teamsData, setTeamsData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  const [modalState, setModalState] = useState('idle'); 
+
+  const [modalState, setModalState] = useState('idle');
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [redeemInput, setRedeemInput] = useState('');
 
@@ -76,7 +82,7 @@ export default function SessionRedeemSuperadmin() {
       }
       if (resSession.ok && dataSession.success) {
         setSessionName(dataSession.data.name);
-        setSessionStatus(dataSession.data.status); 
+        setSessionStatus(dataSession.data.status);
       }
     } catch (error) {
       console.error("Gagal mengambil data:", error);
@@ -89,7 +95,7 @@ export default function SessionRedeemSuperadmin() {
 
   const handleTukarClick = (team) => {
     setSelectedTeam(team);
-    setModalState('input'); 
+    setModalState('input');
   };
 
   const handleProsesTukar = async () => {
@@ -107,7 +113,7 @@ export default function SessionRedeemSuperadmin() {
 
       if (response.ok && result.success) {
         setModalState('success');
-        fetchData(); 
+        fetchData();
       } else {
         alert(result.message);
       }
@@ -115,7 +121,7 @@ export default function SessionRedeemSuperadmin() {
       alert("Gagal memproses penukaran.");
     }
   };
-  
+
   const handleAkhirkanSesi = () => setModalState('end_event');
   const processCloseEvent = async () => {
     try {
@@ -128,8 +134,8 @@ export default function SessionRedeemSuperadmin() {
 
       if (response.ok && result.success) {
         alert("Permainan resmi ditutup! Penukaran hadiah masih bisa dilakukan.");
-        fetchData(); 
-        setModalState('idle'); 
+        fetchData();
+        setModalState('idle');
       }
     } catch (error) {
       alert("Gagal menutup sesi.");
@@ -142,22 +148,22 @@ export default function SessionRedeemSuperadmin() {
     setRedeemInput('');
   };
 
-  const filteredTeams = teamsData.filter(team => 
+  const filteredTeams = teamsData.filter(team =>
     team.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="min-h-screen bg-[#EBF2F8] font-sans flex justify-center pb-32">
       <div className="w-full max-w-md bg-[#EBF2F8] min-h-screen flex flex-col relative px-6 pt-12">
-        
+
         <div className="flex justify-between items-center mb-8 relative z-10">
           <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
             <img src={BackArrowDark} alt="Kembali" className="w-5 h-5" />
             Kembali
           </button>
-          
+
           {sessionStatus !== 'ended' && (
-            <button 
+            <button
               onClick={handleAkhirkanSesi}
               className="text-[#E53E3E] font-bold text-[14px] underline underline-offset-4 hover:opacity-70 transition-opacity"
             >
@@ -175,7 +181,7 @@ export default function SessionRedeemSuperadmin() {
         </h1>
 
         <div className="mb-6 relative z-10">
-          <input 
+          <input
             type="text" placeholder="Cari team..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white border border-[#CBD5E1] rounded-[16px] py-3.5 px-5 text-[14px] text-[#1D2B39] placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] shadow-sm transition-colors"
           />
@@ -183,11 +189,11 @@ export default function SessionRedeemSuperadmin() {
 
         <div className="flex flex-col">
           {filteredTeams.map((team) => (
-            <RedeemCardSuperadmin 
-              key={team.id} 
-              team={team} 
-              sessionStatus={sessionStatus} 
-              onTukarClick={handleTukarClick} 
+            <RedeemCardSuperadmin
+              key={team.id}
+              team={team}
+              sessionStatus={sessionStatus}
+              onTukarClick={handleTukarClick}
             />
           ))}
           {filteredTeams.length === 0 && <p className="text-center text-gray-500 mt-4">Tim tidak ditemukan.</p>}
@@ -204,13 +210,13 @@ export default function SessionRedeemSuperadmin() {
 
         {modalState !== 'idle' && (
           <div className="fixed inset-0 bg-[#EBF2F8]/80 backdrop-blur-[2px] z-50 flex items-center justify-center px-6">
-            
+
             {modalState === 'input' && selectedTeam && (
               <div className="w-full max-w-[340px] bg-white rounded-[24px] p-6 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] flex flex-col items-center text-center animate-fade-in-up">
                 <h2 className="text-[18px] font-bold text-[#1D2B39] mb-6 leading-relaxed">
                   Kurangkan BeeCoin<br />({selectedTeam.name})
                 </h2>
-                <input 
+                <input
                   type="number" placeholder="Jumlah koin yang ditukar..." value={redeemInput} onChange={(e) => setRedeemInput(e.target.value)}
                   className="w-full border border-[#CBD5E1] rounded-[14px] py-3.5 px-4 text-center text-[15px] text-[#1D2B39] font-medium placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] mb-6"
                 />
@@ -238,7 +244,7 @@ export default function SessionRedeemSuperadmin() {
                   <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                 </div>
                 <h2 className="text-[18px] font-bold text-[#1D2B39] mb-3 leading-relaxed">Akhiri Seluruh<br />Permainan?</h2>
-                <p className="text-[#92A0AD] text-[12px] mb-8 px-2">Data pos akan diarsipkan dan peserta diarahkan ke halaman akhir. <br/><br/><span className="text-[#1D2B39] font-bold"> Redeem akan tetap terbuka.</span></p>
+                <p className="text-[#92A0AD] text-[12px] mb-8 px-2">Data pos akan diarsipkan dan peserta diarahkan ke halaman akhir. <br /><br /><span className="text-[#1D2B39] font-bold"> Redeem akan tetap terbuka.</span></p>
                 <div className="w-full flex flex-col gap-3">
                   <button onClick={processCloseEvent} className="w-full bg-[#E53E3E] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#C53030] shadow-[0_4px_0_0_#9B2C2C] hover:bg-[#C53030] active:shadow-[0_0_0_0_#9B2C2C] active:translate-y-[4px] transition-all">
                     Ya, Akhiri Permainan

@@ -15,16 +15,16 @@ export default function LeaderboardPIC() {
     const fetchLeaderboardAndStatus = async () => {
       try {
         const token = localStorage.getItem('auth_token');
-        
+
         const resLeaderboard = await fetch(`/api/sessions/${id}/leaderboard`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
         });
         const dataLeaderboard = await resLeaderboard.json();
         if (resLeaderboard.ok && dataLeaderboard.success) {
           setLeaderboardData(dataLeaderboard.data);
-          
+
           if (dataLeaderboard.session_status) {
-             setSessionStatus(dataLeaderboard.session_status);
+            setSessionStatus(dataLeaderboard.session_status);
           }
         }
       } catch (error) {
@@ -40,13 +40,13 @@ export default function LeaderboardPIC() {
 
     const pollData = async () => {
       if (!isMounted) return;
-      
+
       if (!document.hidden) {
         await fetchLeaderboardAndStatus();
       }
-      
+
       if (isMounted) {
-        timeoutId = setTimeout(pollData, 30000); 
+        timeoutId = setTimeout(pollData, 30000);
       }
     };
 
@@ -57,26 +57,20 @@ export default function LeaderboardPIC() {
       clearTimeout(timeoutId);
     };
   }, [id]);
-  
+
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-32">
       <div className="w-full max-w-md min-h-screen flex flex-col relative">
-        
+
         <div className="pt-12 px-6 flex justify-between items-center">
-           <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"></path></svg>
             Kembali
           </button>
-          
-          {sessionStatus === 'ended' ? (
-            <button onClick={() => navigate(`/pic/session-redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#1C6B99] hover:bg-[#268bc4] active:translate-y-[3px] active:shadow-none transition-all">
-              Redeem
-            </button>
-          ) : (
-            <button disabled className="bg-[#CBD5E1] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-sm cursor-not-allowed">
-              Redeem Terkunci
-            </button>
-          )}
+
+          <button onClick={() => navigate(`/pic/session-redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] font-bold px-4 py-2 rounded-lg shadow-[0_3px_0_0_#1C6B99] hover:bg-[#268bc4] active:translate-y-[3px] active:shadow-none transition-all">
+            {sessionStatus === 'ended' ? 'Redeem' : 'Redeem (Tim Selesai)'}
+          </button>
         </div>
 
         <div className="pt-8 pb-8 flex justify-center">
@@ -117,7 +111,7 @@ export default function LeaderboardPIC() {
             <img src={TrophyIcon} alt="Reward" className="w-7 h-7" />
           </button>
         </div>
-        
+
       </div>
     </div>
   );

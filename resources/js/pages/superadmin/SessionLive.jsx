@@ -7,10 +7,10 @@ import TrophyIcon from '../../assets/Trophy-Icon.svg';
 
 const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, onSelesaiClick }) => {
   const currentPosData = team.posStatus ? team.posStatus[selectedPosId] : null;
-  const state = currentPosData?.status || "locked"; 
+  const state = currentPosData?.status || "locked";
 
-  let eligiblePosId = teamRoute.length > 0 ? teamRoute[0].id : null; 
-  let activePosId = null;   
+  let eligiblePosId = teamRoute.length > 0 ? teamRoute[0].id : null;
+  let activePosId = null;
 
   for (let i = 0; i < teamRoute.length; i++) {
     const pId = teamRoute[i].id;
@@ -30,7 +30,7 @@ const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, o
       }
     } else {
       eligiblePosId = pId;
-      break; 
+      break;
     }
   }
 
@@ -42,7 +42,7 @@ const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, o
         <h3 className="text-[14px] font-bold text-[#1D2B39] leading-tight mb-0.5">{team.name}</h3>
         <p className="text-[#92A0AD] text-[10px] font-medium leading-none">{team.major}</p>
       </div>
-      
+
       <hr className="border-[#F1F5F9] mb-2" />
 
       {state === 'locked' && (
@@ -50,10 +50,10 @@ const TeamCard = React.memo(({ team, selectedPosId, teamRoute, onCheckInClick, o
           <p className="text-[#92A0AD] text-[11px]">
             {isEligible ? "Siap Check-In" : activePosId ? "Sedang di pos lain" : "Belum urutannya"}
           </p>
-          
+
           {isEligible ? (
-            <button 
-              onClick={() => onCheckInClick(team)} 
+            <button
+              onClick={() => onCheckInClick(team)}
               className="bg-[#E5A015] text-white font-bold text-[12px] px-5 py-1.5 rounded-lg shadow-sm active:translate-y-[1px] transition-all"
             >
               Check In
@@ -97,10 +97,10 @@ export default function SessionLiveSuperadmin() {
   const [sessionData, setSessionData] = useState(null);
   const [teamsData, setTeamsData] = useState([]);
   const [selectedPos, setSelectedPos] = useState(null);
-  const [timeLeftSec, setTimeLeftSec] = useState(null); 
+  const [timeLeftSec, setTimeLeftSec] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const [modalState, setModalState] = useState('idle'); 
+  const [modalState, setModalState] = useState('idle');
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [scoreInput, setScoreInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,28 +118,28 @@ export default function SessionLiveSuperadmin() {
         if (!selectedPos) setSelectedPos(result.session.posts[0]);
         setTimeLeftSec(Math.floor(result.remaining_seconds));
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => {
     let isMounted = true;
     let timeoutId;
-    
+
     const pollData = async () => {
       if (!isMounted) return;
-      
+
       if (!document.hidden) {
         await fetchLiveData();
       }
-      
-      if (isMounted) timeoutId = setTimeout(pollData, 30000); 
+
+      if (isMounted) timeoutId = setTimeout(pollData, 30000);
     };
-    
+
     pollData();
-    
-    return () => { 
-      isMounted = false; 
-      clearTimeout(timeoutId); 
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
     };
   }, [id, selectedPos]);
 
@@ -160,7 +160,7 @@ export default function SessionLiveSuperadmin() {
       });
       const resData = await response.json();
       if (response.ok && resData.success) {
-        await fetchLiveData(); 
+        await fetchLiveData();
       } else {
         alert(resData.message || "Gagal melakukan Check In.");
       }
@@ -176,7 +176,7 @@ export default function SessionLiveSuperadmin() {
         body: JSON.stringify({ team_id: selectedTeam.id, post_id: selectedPos.id, coins: scoreInput || 0 })
       });
       setModalState('idle'); setScoreInput(''); fetchLiveData();
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const processCloseEvent = async () => {
@@ -189,8 +189,8 @@ export default function SessionLiveSuperadmin() {
       const result = await response.json();
       if (response.ok && result.success) {
         alert("Permainan resmi ditutup! Tombol Redeem sekarang terbuka.");
-        fetchLiveData(); 
-        setModalState('idle'); 
+        fetchLiveData();
+        setModalState('idle');
       }
     } catch (error) { alert("Gagal menutup sesi."); }
   };
@@ -203,7 +203,7 @@ export default function SessionLiveSuperadmin() {
     return `${h}:${m}:${s}`;
   };
 
-  const filteredTeams = teamsData.filter(team => 
+  const filteredTeams = teamsData.filter(team =>
     team.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -212,21 +212,22 @@ export default function SessionLiveSuperadmin() {
   return (
     <div className="min-h-screen bg-[#EBF2F8] pb-32">
       <div className="w-full max-w-md lg:max-w-5xl mx-auto px-6 pt-12">
-        
-        <div className="flex justify-between items-center mb-8">
-            <button onClick={() => navigate('/superadmin/home')} className="flex items-center gap-1.5 font-bold text-[#1D2B39] text-[14px]">
-               <img src={BackArrowDark} className="w-5 h-5" alt="Back" /> Kembali
-            </button>
 
-            {sessionData?.status === 'ended' ? (
-              <button onClick={() => navigate(`/superadmin/session/redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] lg:text-[14px] font-bold px-5 py-2.5 rounded-xl shadow-[0_3px_0_0_#1C6B99] active:translate-y-[3px] active:shadow-none hover:bg-[#268bc4] transition-all">
-                Redeem Hadiah
-              </button>
-            ) : (
+        <div className="flex justify-between items-center mb-8">
+          <button onClick={() => navigate('/superadmin/home')} className="flex items-center gap-1.5 font-bold text-[#1D2B39] text-[14px]">
+            <img src={BackArrowDark} className="w-5 h-5" alt="Back" /> Kembali
+          </button>
+
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate(`/superadmin/session/redeem/${id}`)} className="bg-[#2E9AD7] text-white text-[12px] lg:text-[14px] font-bold px-5 py-2.5 rounded-xl shadow-[0_3px_0_0_#1C6B99] active:translate-y-[3px] active:shadow-none hover:bg-[#268bc4] transition-all">
+              {sessionData?.status === 'ended' ? 'Redeem Hadiah' : 'Redeem (Tim Selesai)'}
+            </button>
+            {sessionData?.status !== 'ended' && (
               <button onClick={() => setModalState('end_event')} className="bg-[#E53E3E] text-white text-[12px] lg:text-[14px] font-bold px-5 py-2.5 rounded-xl shadow-[0_3px_0_0_#B91C1C] active:translate-y-[3px] active:shadow-none hover:bg-[#DC2626] transition-all">
                 Akhiri Sesi
               </button>
             )}
+          </div>
         </div>
 
         <div className="flex justify-between items-center mb-8 relative z-30">
@@ -257,38 +258,38 @@ export default function SessionLiveSuperadmin() {
 
         <div className="mb-12">
           <div className="mb-4">
-            <input 
-              type="text" 
-              placeholder="Cari nama tim..." 
+            <input
+              type="text"
+              placeholder="Cari nama tim..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white border border-[#CBD5E1] rounded-[16px] py-3 px-4 text-[14px] text-[#1D2B39] placeholder-[#92A0AD] focus:outline-none focus:border-[#2E9AD7] shadow-sm transition-colors"
             />
           </div>
-          
+
           <div className="flex flex-col gap-3 overflow-y-auto max-h-[750px] pr-2 pb-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-[#CBD5E1] [&::-webkit-scrollbar-thumb]:rounded-full">
             {filteredTeams.length > 0 ? (
               filteredTeams.map((team) => {
                 const teamIdx = teamsData.findIndex(t => t.id === team.id);
-                
+
                 const numPosts = sessionData.posts.length;
                 const chunkSize = Math.ceil(teamsData.length / numPosts) || 1;
                 const chunkIndex = Math.floor(teamIdx / chunkSize);
 
                 const teamRoute = [];
-                for(let stepIdx = 0; stepIdx < numPosts; stepIdx++) {
+                for (let stepIdx = 0; stepIdx < numPosts; stepIdx++) {
                   const postIdx = (chunkIndex + stepIdx) % numPosts;
                   teamRoute.push(sessionData.posts[postIdx]);
                 }
 
                 return (
-                  <TeamCard 
-                    key={`${team.id}-${selectedPos.id}-${team.posStatus?.[selectedPos.id]?.status}`} 
-                    team={team} 
-                    selectedPosId={selectedPos.id} 
+                  <TeamCard
+                    key={`${team.id}-${selectedPos.id}-${team.posStatus?.[selectedPos.id]?.status}`}
+                    team={team}
+                    selectedPosId={selectedPos.id}
                     teamRoute={teamRoute}
-                    onCheckInClick={handleCheckIn} 
-                    onSelesaiClick={(t) => { setSelectedTeam(t); setModalState('scoring'); }} 
+                    onCheckInClick={handleCheckIn}
+                    onSelesaiClick={(t) => { setSelectedTeam(t); setModalState('scoring'); }}
                   />
                 );
               })
@@ -296,7 +297,7 @@ export default function SessionLiveSuperadmin() {
               <p className="text-center text-[#92A0AD] text-[13px] py-6">Tim tidak ditemukan.</p>
             )}
           </div>
-        </div> 
+        </div>
 
         <div className="mt-10 mb-10">
           <h2 className="text-[17px] font-bold text-[#1D2B39] mb-4 flex items-center gap-2">
@@ -358,7 +359,7 @@ export default function SessionLiveSuperadmin() {
                     <th className="py-3 px-2 text-[10px] font-bold text-[#92A0AD] uppercase sticky left-0 bg-white z-30">Tim</th>
                     {sessionData.posts.map((pos) => (
                       <th key={pos.id} className="py-3 px-2 text-[10px] font-bold text-[#92A0AD] uppercase text-center">
-                         {pos.name}
+                        {pos.name}
                       </th>
                     ))}
                   </tr>
@@ -418,7 +419,7 @@ export default function SessionLiveSuperadmin() {
                 <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
               </div>
               <h2 className="text-[18px] font-bold text-[#1D2B39] mb-3">Akhiri Seluruh<br />Permainan?</h2>
-              <p className="text-[#92A0AD] text-[12px] mb-8">Data pos tim akan diarsipkan. <br/><span className="text-[#1D2B39] font-bold">Tombol Redeem akan terbuka setelah ini.</span></p>
+              <p className="text-[#92A0AD] text-[12px] mb-8">Data pos tim akan diarsipkan. <br /><span className="text-[#1D2B39] font-bold">Redeem tetap bisa dilakukan untuk tim yang sudah selesai.</span></p>
               <div className="w-full flex flex-col gap-3">
                 <button onClick={processCloseEvent} className="w-full bg-[#E53E3E] text-white font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#C53030] shadow-[0_4px_0_0_#9B2C2C] active:shadow-none active:translate-y-[4px] transition-all">Ya, Akhiri Permainan</button>
                 <button onClick={() => setModalState('idle')} className="w-full bg-white text-[#1D2B39] font-bold text-[16px] py-3.5 rounded-[12px] border-2 border-[#1D2B39] hover:bg-gray-50 transition-all">Batal</button>
