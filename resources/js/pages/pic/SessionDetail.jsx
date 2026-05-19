@@ -54,7 +54,7 @@ export default function SessionDetail() {
         {/* --- HEADER NAVIGASI --- */}
         <div className="flex justify-between items-center mb-6">
           <button 
-            onClick={() => navigate('/pic/home')} // Kembali ke Home PIC
+            onClick={() => navigate('/pic/home')} 
             className="flex items-center gap-1 text-[#1D2B39] font-bold text-[15px] hover:opacity-70 transition-opacity"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -106,10 +106,6 @@ export default function SessionDetail() {
                   <div>
                     <label className="block text-[14px] font-bold text-[#1D2B39] mb-1.5">Lokasi Pos</label>
                     <input type="text" value={pos.location} readOnly className="w-full bg-gray-50 border border-[#CBD5E1] text-[#92A0AD] text-[15px] rounded-[12px] px-4 py-3 cursor-not-allowed focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-[14px] font-bold text-[#1D2B39] mb-1.5">Durasi Maks.</label>
-                    <input type="text" value={pos.max_duration || '00:00'} readOnly className="w-full bg-gray-50 border border-[#CBD5E1] text-[#92A0AD] text-[15px] rounded-[12px] px-4 py-3 cursor-not-allowed focus:outline-none" />
                   </div>
                 </div>
               </div>

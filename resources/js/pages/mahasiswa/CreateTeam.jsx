@@ -11,7 +11,10 @@ export default function CreateTeam() {
   const sessionCode = location.state?.sessionCode;
   
   async function handleCheckTeams() {
-    if (!teamName || !teamMajor) {
+    const safeTeamName = teamName.trim();
+    const safeTeamMajor = teamMajor.trim();
+
+    if (!safeTeamName || !safeTeamMajor) {
       alert("Nama Tim dan Jurusan wajib diisi!");
       return;
     }
@@ -33,7 +36,6 @@ export default function CreateTeam() {
           return;
       }
 
-      // Jika masih aman (upcoming), lanjut buat tim
       const response = await fetch("/api/create-teams", {
         method: "POST",
         headers: { 
@@ -42,8 +44,8 @@ export default function CreateTeam() {
         },
         body: JSON.stringify({
           session_code: sessionCode,
-          team_name: teamName,
-          team_major: teamMajor,
+          team_name: safeTeamName, // Gunakan nama yang sudah bebas spasi
+          team_major: safeTeamMajor,
         }),
       });
 
@@ -52,17 +54,19 @@ export default function CreateTeam() {
       if (data.status === "team_created") {
           localStorage.setItem("active_user", JSON.stringify({
              sessionCode: sessionCode,
-             nameTeam: teamName,
+             nameTeam: safeTeamName,
              emergencyCode: data.team.emergency_code
           }));
 
           navigate("/waiting", {
               state: { 
                   sessionCode: sessionCode, 
-                  nameTeam: teamName, 
+                  nameTeam: safeTeamName, 
                   emergencyCode: data.team.emergency_code 
               },
           });
+          
+          return; 
       } 
       else if (data.status === "team_exists") {
           alert("Nama tim di sesi ini sudah dipakai! Coba nama lain.");
@@ -85,9 +89,9 @@ export default function CreateTeam() {
     } catch (error) {
       console.error("Create Team Error:", error);
       alert("Terjadi kesalahan koneksi ke server!");
-    } finally {
-      setIsLoading(false); 
-    }
+    } 
+    
+    setIsLoading(false); 
   }
 
   return (

@@ -14,7 +14,6 @@ use App\Http\Controllers\Api\TeamController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/student-sync', [App\Http\Controllers\Api\GameSessionController::class, 'studentGameplaySync']);
-Route::post('/sessions/{id}/checkin-pos', [App\Http\Controllers\Api\GameSessionController::class, 'checkInPos']);
 
 Route::post('/check-session', function (Request $request) {
     $session = GameSession::where('session_code', $request->session_code)->first();
@@ -26,6 +25,9 @@ Route::post('/create-teams', function (Request $request) {
     $session = GameSession::where('session_code', $request->session_code)->first();
     if (!$session) return response()->json(['status' => 'session_not_found'], 404);
 
+    if ($session->status === 'live') return response()->json(['status' => 'session_started'], 400);
+    if ($session->status === 'ended') return response()->json(['status' => 'session_ended'], 400);
+
     $existingTeam = Team::where('game_session_id', $session->id)
                     ->where('name', $request->team_name)
                     ->first();
@@ -34,10 +36,8 @@ Route::post('/create-teams', function (Request $request) {
 
     $emergencyCode = strtoupper(substr(md5(uniqid()), 0, 6));
 
-    // 1. Hitung jumlah tim yang sudah ada untuk menentukan nilai "Shift/Geseran"
     $teamCount = Team::where('game_session_id', $session->id)->count();
 
-    // 2. Buat Tim Baru
     $newTeam = Team::create([
         'game_session_id' => $session->id,
         'name'            => $request->team_name,
@@ -48,21 +48,16 @@ Route::post('/create-teams', function (Request $request) {
         'redeemed_amount' => 0,
     ]);
 
-    // 3. Ambil semua pos yang terdaftar di sesi ini
     $posts = DB::table('posts')->where('game_session_id', $session->id)->orderBy('id')->get();
 
-    // 4. LOGIKA RANDOM/SHIFTING POS ANTI-BOTTLENECK
     if ($posts->count() > 0) {
-        // Tentukan titik potong berdasarkan urutan pendaftaran tim
         $shiftIndex = $teamCount % $posts->count();
         
-        // Memotong array pos lalu menyambungnya kembali dengan urutan baru
         $shiftedPosts = $posts->slice($shiftIndex)->merge($posts->take($shiftIndex));
 
         $teamPostsData = [];
         $now = now();
         
-        // Masukkan data ke database dengan urutan yang sudah digeser
         foreach ($shiftedPosts as $post) {
             $teamPostsData[] = [
                 'team_id'      => $newTeam->id,

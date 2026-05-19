@@ -15,7 +15,6 @@ export default function WaitingRoom() {
 
   const fetchDataRealtime = async () => {
     try {
-      // ✅ SEKARANG HANYA TEMBAK 1 API SAJA (Hemat Beban Server 50%)
       const response = await fetch("/api/leaderboard", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -32,9 +31,13 @@ export default function WaitingRoom() {
         return navigate("/"); 
       }
 
-      // Render Daftar Tim
       if (data.success && Array.isArray(data.data)) {
-        const isTeamStillExists = data.data.some(team => team.name === nameTeam);
+        
+        const safeLocalName = nameTeam.trim().toLowerCase();
+        const isTeamStillExists = data.data.some(
+          team => team.name.trim().toLowerCase() === safeLocalName
+        );
+
         if (!isTeamStillExists) {
            localStorage.removeItem("active_user");
            alert("Tim kamu telah dihapus oleh Admin! Silakan daftar kembali.");

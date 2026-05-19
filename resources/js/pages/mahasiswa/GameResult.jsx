@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import * as htmlToImage from 'html-to-image'; 
-import CoinIcon from "../../assets/Coin3D.png"; 
-import FallbackQR from "../../assets/qr-example.png"; 
+import * as htmlToImage from 'html-to-image';
+import CoinIcon from "../../assets/Coin3D.png";
+import FallbackQR from "../../assets/qr-example.png";
 import GhostHappy from "../../assets/ghost-happy.png";
 import GhostHorror from "../../assets/ghost-horror.png";
 import GhostLove from "../../assets/ghost-love.png"; 
