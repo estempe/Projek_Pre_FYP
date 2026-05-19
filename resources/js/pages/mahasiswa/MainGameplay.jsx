@@ -45,86 +45,85 @@ export default function MainGameplay() {
     if (!sessionCode || !namaTeam || namaTeam === "Tim") return;
     
     try {
-      const [resStatus, resCoin, resPosts, resSess] = await Promise.all([
-        fetch(`/api/session-status/${sessionCode}`),
-        fetch("/api/getTeamCoins", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_code: sessionCode, team_name: namaTeam }),
-        }),
-        fetch("/api/team-posts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_code: sessionCode, team_name: namaTeam }),
-        }),
-        fetch("/api/sessionData", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_code: sessionCode }),
-        })
-      ]);
+      const response = await fetch("/api/student-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_code: sessionCode, team_name: namaTeam }),
+      });
+      const data = await response.json();
 
-      const [dataStatus, dataCoin, dataPosts, dataSess] = await Promise.all([
-        resStatus.json(), resCoin.json(), resPosts.json(), resSess.json()
-      ]);
+      if (data.status === "ended") return navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
+      if (data.status === "upcoming") return navigate("/waiting", { state: { sessionCode, nameTeam: namaTeam, emergencyCode: emergencyCode } });
 
-      if (dataStatus.status === "ended") {
-        navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
-        return;
+      if (data.success) {
+        setCoins(data.team.total_coins);
+        setPosts(data.posts);
+        setSessionInfo(data.sessionInfo);
+        setTimeLeftSec(data.remaining_seconds);
+        setEmergencyCode(data.team.emergency_code);
+
+        localStorage.setItem(cacheKey, JSON.stringify({
+          posts: data.posts, coins: data.team.total_coins, sessionInfo: data.sessionInfo, timeLeftSec: data.remaining_seconds, emergencyCode: data.team.emergency_code
+        }));
       }
-
-      if (dataStatus.status === "upcoming") {
-        navigate("/waiting", { state: { sessionCode, nameTeam: namaTeam, emergencyCode: emergencyCode } });
-        return;
-      }
-
-      const newTime = Math.floor(dataStatus.remaining_seconds);
-      const newCoins = dataCoin.total_coins;
-      const newPosts = dataPosts.data || [];
-      const newSessInfo = dataSess.data || {};
-      const fetchedEmergencyCode = dataCoin.team?.emergency_code || emergencyCode;
-
-      setCoins(newCoins);
-      setPosts(newPosts);
-      setSessionInfo(newSessInfo);
-      setTimeLeftSec(newTime);
-      setEmergencyCode(fetchedEmergencyCode);
-
-      localStorage.setItem(cacheKey, JSON.stringify({
-        posts: newPosts,
-        coins: newCoins,
-        sessionInfo: newSessInfo,
-        timeLeftSec: newTime,
-        emergencyCode: fetchedEmergencyCode
-      }));
-
-    } catch (error) {
-      console.error("Gagal sinkronisasi data:", error);
-    }
+    } catch (error) {}
   };
 
+
   useEffect(() => {
-    if (!sessionCode || !namaTeam || namaTeam === "Tim") {
-      return navigate("/");
-    }
+    if (!sessionCode || !namaTeam || namaTeam === "Tim") return navigate("/");
     
     let isMounted = true;
     const autoPollData = async () => {
       if (!isMounted) return;
-      await fetchAllData();
-      if (isMounted) {
-        // Tembak otomatis setiap 60 detik
-        timeoutRef.current = setTimeout(autoPollData, 60000); 
+      
+      if (!document.hidden) {
+        await fetchAllData();
       }
+      if (isMounted) timeoutRef.current = setTimeout(autoPollData, 60000); 
     };
     
-    autoPollData();
+    autoPollData(); // Jalankan pertama kali saat masuk
     
     return () => {
       isMounted = false;
       clearTimeout(timeoutRef.current);
     };
-  }, [sessionCode, namaTeam]);
+  }, [sessionCode, namaTeam]); 
+
+  useEffect(() => {
+    if (!sessionCode) return;
+    
+    let isMounted = true;
+    let statusTimeoutId;
+
+    const fastStatusCheck = async () => {
+      if (!isMounted) return;
+      
+      if (!document.hidden) {
+        try {
+          const res = await fetch(`/api/session-status/${sessionCode}`, { 
+              headers: { "Accept": "application/json" } 
+          });
+          const data = await res.json();
+          
+          if (data.status === "ended") {
+            navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
+            return; // Hentikan jika sudah ditutup
+          }
+        } catch (error) {}
+      }
+      
+      if (isMounted) statusTimeoutId = setTimeout(fastStatusCheck, 15000);
+    };
+
+    statusTimeoutId = setTimeout(fastStatusCheck, 15000);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(statusTimeoutId);
+    };
+  }, [sessionCode, namaTeam, navigate]);
 
   // TIMER LOKAL (Menghitung detik)
   useEffect(() => {

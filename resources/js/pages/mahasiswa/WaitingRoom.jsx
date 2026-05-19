@@ -15,40 +15,32 @@ export default function WaitingRoom() {
 
   const fetchDataRealtime = async () => {
     try {
-      const resStatus = await fetch(`/api/session-status/${sessionCode}`, { 
-          headers: { "Accept": "application/json" } 
+      // ✅ SEKARANG HANYA TEMBAK 1 API SAJA (Hemat Beban Server 50%)
+      const response = await fetch("/api/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ session_code: sessionCode }),
       });
-      const dataStatus = await resStatus.json();
+      const data = await response.json();
 
-      if (dataStatus.status === "live") {
-        navigate("/gameplay", {
-          state: { sessionCode, nameTeam, emergencyCode },
-        });
-        return; 
+      // Cek Status Permainan
+      if (data.session_status === "live") {
+        return navigate("/gameplay", { state: { sessionCode, nameTeam, emergencyCode } });
       }
-
-      if (dataStatus.status === "ended") {
+      if (data.session_status === "ended") {
         alert("Sesi permainan ini telah ditutup atau diakhiri.");
-        navigate("/");
-        return; 
+        return navigate("/"); 
       }
 
-      const resTeams = await fetch(`/api/getTeams?session_code=${sessionCode}`, { 
-          headers: { "Accept": "application/json" }
-      });
-      const dataTeams = await resTeams.json();
-
-      if (Array.isArray(dataTeams)) {
-        const isTeamStillExists = dataTeams.some(team => team.name === nameTeam);
-        
+      // Render Daftar Tim
+      if (data.success && Array.isArray(data.data)) {
+        const isTeamStillExists = data.data.some(team => team.name === nameTeam);
         if (!isTeamStillExists) {
            localStorage.removeItem("active_user");
            alert("Tim kamu telah dihapus oleh Admin! Silakan daftar kembali.");
-           navigate("/"); 
-           return;
+           return navigate("/"); 
         }
-
-        setTeams(dataTeams);
+        setTeams(data.data);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -56,7 +48,6 @@ export default function WaitingRoom() {
   };
 
   useEffect(() => {
-    // kembaliin ke depan
     if (!sessionCode || !nameTeam || nameTeam === "Tim") {
         navigate("/");
         return;
@@ -68,14 +59,17 @@ export default function WaitingRoom() {
     const pollData = async () => {
       if (!isMounted) return;
       
-      await fetchDataRealtime(); 
+      // ✅ MATA BROWSER (Aman dari DDoS)
+      if (!document.hidden) {
+        await fetchDataRealtime(); 
+      }
       
       if (isMounted) {
         timeoutId = setTimeout(pollData, 10000); 
       }
     };
 
-    pollData(); // Jalankan pertama kali
+    pollData(); 
     
     return () => {
       isMounted = false;

@@ -13,7 +13,10 @@ class GameSessionController extends Controller
 {
     public function index(Request $request)
     {
-        $sessions = GameSession::orderBy('start_time', 'asc')->get();
+        $sessions = GameSession::select('id', 'name', 'session_code', 'start_time', 'duration', 'status')
+                        ->orderBy('start_time', 'asc')
+                        ->get();
+                        
         return response()->json([
             'success' => true,
             'message' => 'Berhasil mengambil daftar sesi',
@@ -109,13 +112,24 @@ class GameSessionController extends Controller
             $remainingSeconds = (int) ceil(max(0, $totalDurationSec - $elapsedSec));
         }
 
-        $teams = \App\Models\Team::where('game_session_id', $id)->get();
-        $teamPosts = \App\Models\TeamPost::whereIn('team_id', $teams->pluck('id'))->get();
+        $teams = \App\Models\Team::where('game_session_id', $id)
+                    ->select('id', 'name', 'major', 'total_coins') 
+                    ->get();
+                    
+        $teamPosts = \App\Models\TeamPost::whereIn('team_id', $teams->pluck('id'))
+                    ->select('team_id', 'post_id', 'status', 'earned_coins', 'check_in_time') 
+                    ->get();
+
         $postDurations = $session->posts->pluck('max_duration', 'id');
 
-        $formattedTeams = $teams->map(function($team) use ($teamPosts, $postDurations) {
+        $groupedTeamPosts = $teamPosts->groupBy('team_id');
+
+        $formattedTeams = $teams->map(function($team) use ($groupedTeamPosts, $postDurations) {
             $posStatus = [];
-            foreach($teamPosts->where('team_id', $team->id) as $tp) {
+            
+            $myPosts = $groupedTeamPosts->get($team->id, collect()); 
+
+            foreach($myPosts as $tp) {
                 $posStatus[$tp->post_id] = [
                     'status'        => $tp->status, 
                     'earnedCoins'   => $tp->earned_coins,
@@ -192,25 +206,25 @@ class GameSessionController extends Controller
 
     public function getLeaderboard($id)
     {
-        // 1. Hitung total pos yang ada di sesi ini
+        $session = \App\Models\GameSession::find($id);
+        if (!$session) {
+            return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan'], 404);
+        }
+
         $totalPosts = \App\Models\Post::where('game_session_id', $id)->count();
 
-        // 2. Ambil semua tim berdasarkan skor
         $teams = \App\Models\Team::where('game_session_id', $id)
                     ->selectRaw('teams.*, (total_coins + redeemed_amount) as all_time_score')
                     ->orderBy('all_time_score', 'desc')->get();
 
-        // 3. Hitung berapa pos yang statusnya 'completed' untuk masing-masing tim
         $completedPosts = \App\Models\TeamPost::whereIn('team_id', $teams->pluck('id'))
                                 ->where('status', 'completed')
                                 ->selectRaw('team_id, count(*) as total_completed')
                                 ->groupBy('team_id')
                                 ->pluck('total_completed', 'team_id');
 
-        // 4. Petakan datanya
+        
         $leaderboard = $teams->map(function($team, $index) use ($totalPosts, $completedPosts) {
-            
-            // Cek apakah jumlah pos yang diselesaikan tim == total pos di sesi ini
             $teamCompletedCount = $completedPosts[$team->id] ?? 0;
             $isFinished = ($totalPosts > 0 && $teamCompletedCount >= $totalPosts);
 
@@ -223,11 +237,17 @@ class GameSessionController extends Controller
                 'balance'        => (int) $team->total_coins,   
                 'isRedeemed'     => (bool) $team->is_redeemed,
                 'redeemedAmount' => (int) $team->redeemed_amount,
-                'isFinished'     => $isFinished // <-- INI YANG DITAMBAHKAN
+                'isFinished'     => $isFinished
             ];
         });
 
-        return response()->json(['success' => true, 'data' => $leaderboard]);
+        return response()->json([
+            'success' => true, 
+            'session_status' => $session->status,
+            'session_name' => $session->name,           
+            'session_code' => $session->session_code,  
+            'data' => $leaderboard
+        ]);
     }
     
     public function redeemCoins(Request $request, $id)
@@ -311,7 +331,6 @@ class GameSessionController extends Controller
         return response()->json(['success' => true, 'message' => 'Sesi resmi ditutup!']);
     }
 
-    // --- FUNGSI BARU: HAPUS SESI ---
     public function destroySession($id)
     {
         $session = GameSession::find($id);
@@ -328,4 +347,48 @@ class GameSessionController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Sesi berhasil dihapus!']);
     }
+
+    public function studentGameplaySync(Request $request)
+    {
+        $sessionCode = $request->session_code;
+        $teamName = $request->team_name;
+
+        $session = GameSession::with('posts')->where('session_code', $sessionCode)->first();
+        if (!$session) return response()->json(['success' => false, 'message' => 'Sesi tidak ditemukan']);
+
+        $team = \App\Models\Team::where('game_session_id', $session->id)->where('name', $teamName)->first();
+        if (!$team) return response()->json(['success' => false, 'message' => 'Tim tidak ditemukan']);
+
+        $remainingSeconds = 0;
+        if ($session->start_time && $session->status === 'live') {
+            $durationParts = explode(':', $session->duration);
+            $totalDurationSec = ((isset($durationParts[0]) ? (int)$durationParts[0] : 0) * 3600) + ((isset($durationParts[1]) ? (int)$durationParts[1] : 0) * 60) + (isset($durationParts[2]) ? (int)$durationParts[2] : 0);
+            $elapsedSec = max(0, time() - strtotime($session->start_time));
+            $remainingSeconds = (int) ceil(max(0, $totalDurationSec - $elapsedSec));
+        }
+
+        $teamPosts = \App\Models\TeamPost::where('team_id', $team->id)->get()->keyBy('post_id');
+        $formattedPosts = $session->posts->map(function($post) use ($teamPosts) {
+            $tp = $teamPosts->get($post->id);
+            return [
+                'id' => $post->id,
+                'name' => $post->name,
+                'location' => $post->location,
+                'max_duration' => $post->max_duration,
+                'status' => $tp ? $tp->status : 'locked',
+                'earned_coins' => $tp ? $tp->earned_coins : 0,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'status' => $session->status,
+            'remaining_seconds' => $remainingSeconds,
+            'sessionInfo' => ['name' => $session->name, 'redeem_name' => $session->redeem_name, 'redeem_location' => $session->redeem_location],
+            'team' => ['total_coins' => $team->total_coins, 'emergency_code' => $team->emergency_code],
+            'posts' => $formattedPosts
+        ]);
+    }
 }
+
+    

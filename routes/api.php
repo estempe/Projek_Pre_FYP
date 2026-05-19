@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\TeamController;
 // ==========================================================
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/student-sync', [App\Http\Controllers\Api\GameSessionController::class, 'studentGameplaySync']);
 Route::post('/sessions/{id}/checkin-pos', [App\Http\Controllers\Api\GameSessionController::class, 'checkInPos']);
 
 Route::post('/check-session', function (Request $request) {
@@ -157,22 +158,30 @@ Route::post('/rejoin', function (Illuminate\Http\Request $request) {
     return response()->json(['status' => 'found', 'team' => $team]);
 });
 
-// (Rute lainnya seperti /leaderboard, /sessionData, /getTeamCoins, dan Middleware Auth tetap sama persis seperti aslimu, tidak perlu diubah karena sudah bagus).
 Route::post('/leaderboard', function (Request $request) {
     $session = GameSession::where('session_code', $request->session_code)->first();
     if (!$session) return response()->json(['status' => 'session_not_found'], 404);
+    
     $leaderboard = DB::table('teams')
         ->leftJoin('team_posts', function ($join) { $join->on('teams.id', '=', 'team_posts.team_id'); })
         ->where('teams.game_session_id', $session->id)
         ->select('teams.id', 'teams.name', 'teams.major', DB::raw('COALESCE(SUM(CASE WHEN team_posts.status = "completed" THEN team_posts.earned_coins ELSE 0 END), 0) as total_coins'), DB::raw('COUNT(team_posts.id) as total_posts'), DB::raw('SUM(CASE WHEN team_posts.status = "completed" THEN 1 ELSE 0 END) as completed_posts'))
         ->groupBy('teams.id', 'teams.name', 'teams.major')
         ->orderByDesc('total_coins')->get();
+        
     $leaderboard = $leaderboard->map(function ($team) {
         $team->isFinished = ($team->total_posts > 0 && $team->total_posts == $team->completed_posts);
         return $team;
     });
-    return response()->json(['status' => 'success', 'data' => $leaderboard]);
+        
+    return response()->json([
+        'status' => 'success', 
+        'success' => true,
+        'session_status' => $session->status, 
+        'data' => $leaderboard
+    ]);
 });
+
 Route::post('/sessionData', function (Request $request) {
     $session = GameSession::where('session_code', $request->session_code)->first();
     if (!$session) return response()->json(['status' => 'session_not_found'], 404);

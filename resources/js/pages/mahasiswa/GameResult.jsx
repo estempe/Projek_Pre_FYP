@@ -15,16 +15,17 @@ export default function GameResult() {
   const sessionCode = location.state?.sessionCode || "";
   const actualTeamName = location.state?.nameTeam || "Nama Tim";
 
-  // --- STATE DATA ---
   const [score, setScore] = useState(0); 
   const [teamName, setTeamName] = useState(actualTeamName);
   const [isQROpen, setIsQROpen] = useState(false); 
   
-  // State QR
   const [qrLink, setQrLink] = useState("");
   const [qrImage, setQrImage] = useState(FallbackQR);
   const [redeemLocation, setRedeemLocation] = useState("MMG (Lantai 2)");
 
+  const [isRedeemed, setIsRedeemed] = useState(false);
+  const [redeemedAmount, setRedeemedAmount] = useState(0);
+  const hasAutoRedirected = useRef(location.state?.fromRedeem || false);
 
   useEffect(() => {
     if (!sessionCode) return;
@@ -55,11 +56,12 @@ export default function GameResult() {
     .catch(err => console.error("Gagal load session data:", err));
   }, [sessionCode]);
 
-
   useEffect(() => {
     if (!sessionCode || !actualTeamName) return;
 
     const checkTeamStatus = () => {
+      if (document.hidden) return;
+
       fetch("/api/getTeamCoins", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -68,34 +70,35 @@ export default function GameResult() {
       .then(res => res.json())
       .then(data => {
         if (data.status === "success" && data.team) {
+          setScore(data.total_coins);
           
           if (data.team.is_redeemed === true || data.team.is_redeemed === 1) {
-             navigate("/redeem-success", { 
-               state: { 
-                 sessionCode: sessionCode, 
-                 nameTeam: actualTeamName, 
-                 redeemedCoins: data.team.redeemed_amount 
-               } 
-             });
-          } else {
-             setScore(data.total_coins);
+             setIsRedeemed(true);
+             setRedeemedAmount(data.team.redeemed_amount);
+             
+             if (!hasAutoRedirected.current) {
+                hasAutoRedirected.current = true;
+                navigate("/redeem-success", { 
+                  state: { sessionCode: sessionCode, nameTeam: actualTeamName, redeemedCoins: data.team.redeemed_amount } 
+                });
+             }
           }
-          
         }
       })
       .catch(err => console.error("Gagal load skor:", err));
     };
 
-    // Jalankan sekali lalu ulang setiap 5 detik
     checkTeamStatus();
-    const intervalId = setInterval(checkTeamStatus, 5000);
+    let intervalId;
+    const loopCheck = () => {
+       checkTeamStatus();
+       intervalId = setTimeout(loopCheck, 15000);
+    }
+    intervalId = setTimeout(loopCheck, 15000);
     
-    // Bersihkan interval saat pindah halaman
-    return () => clearInterval(intervalId);
+    return () => clearTimeout(intervalId);
   }, [sessionCode, actualTeamName, navigate]);
 
-
-  // --- LOGIC BARU: 3 TINGKATAN TEMA ---
   const isLove = score > 800;
   const isHappy = score >= 500 && score <= 800;
   const isHorror = score < 500;
@@ -174,6 +177,15 @@ export default function GameResult() {
           Download & Share Ceritamu
         </button>
 
+        {isRedeemed && (
+          <button 
+            onClick={() => navigate("/redeem-success", { state: { sessionCode, nameTeam: actualTeamName, redeemedCoins: redeemedAmount } })} 
+            className="mt-4 font-bold text-[14px] px-6 py-3 rounded-xl transition-all w-fit min-w-[240px] active:translate-y-[4px] bg-[#1D2B39] text-white border-2 border-[#16212C] shadow-[0_4px_0_0_#0F172A] hover:bg-[#2A3948] active:shadow-none"
+          >
+            Selanjutnya ➔
+          </button>
+        )}
+
         {(hasValidLink || hasValidImage) && (
           <div onClick={() => setIsQROpen(true)} className="mt-6 bg-white rounded-[14px] p-2 flex items-center gap-3 w-[240px] shadow-sm border border-gray-100 cursor-pointer hover:scale-105 active:scale-95 transition-all">
             {hasValidImage && (
@@ -182,7 +194,6 @@ export default function GameResult() {
               </div>
             )}
             <div className="flex-1 min-w-0 flex items-center h-full"> 
-              {/* PERUBAHAN 1: Tampilkan teks "Buka Link Tautan" di luar (di tombol mini) */}
               <span className="block text-[13px] font-semibold text-[#1D2B39] underline underline-offset-2 truncate w-full text-center">
                 {hasValidLink ? "Buka Link Tautan" : "Klik Untuk Perbesar QR"}
               </span>
@@ -190,9 +201,11 @@ export default function GameResult() {
           </div>
         )}
 
-        <p className={`${theme.subTitleColor} text-[11px] text-center mt-6 max-w-[220px] leading-relaxed transition-colors`}>
-          Tunjukkan layar ini ke Kakak PIC di <br/><span className="font-bold text-[#E5A015] text-[13px]">{redeemLocation}</span><br/> untuk klaim hadiahmu!
-        </p>
+        {!isRedeemed && (
+          <p className={`${theme.subTitleColor} text-[11px] text-center mt-6 max-w-[220px] leading-relaxed transition-colors`}>
+            Tunjukkan layar ini ke Kakak PIC di <br/><span className="font-bold text-[#E5A015] text-[13px]">{redeemLocation}</span><br/> untuk klaim hadiahmu!
+          </p>
+        )}
 
       </div>
 
@@ -209,7 +222,6 @@ export default function GameResult() {
 
             {hasValidLink && (
               <div className="w-full text-center mb-8">
-                  {/* PERUBAHAN 2: Tampilkan URL asli (link input) di dalam pop-up modal */}
                   <a href={qrLink.startsWith('http') ? qrLink : `https://${qrLink}`} target="_blank" rel="noreferrer" className="block text-[15px] font-bold underline truncate px-2 text-[#2E9AD7] hover:text-[#1D2B39] transition-colors">
                     {qrLink}
                   </a>

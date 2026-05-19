@@ -11,23 +11,26 @@ export default function Leaderboard() {
   const namaTeam = location.state?.nameTeam;
   const sessionCode = location.state?.sessionCode;
 
-  const prevTeamsRef = useRef(JSON.parse(sessionStorage.getItem(`lb_mhs_${sessionCode}`)) || []);
+  const prevTeamsRef = useRef([]);
+
+  // Mengambil data lama dari sessionStorage saat komponen pertama kali dimuat
+  useEffect(() => {
+    if (sessionCode) {
+      try {
+        const stored = sessionStorage.getItem(`lb_mhs_${sessionCode}`);
+        if (stored) {
+          prevTeamsRef.current = JSON.parse(stored);
+        }
+      } catch (e) {}
+    }
+  }, [sessionCode]);
 
   function goToGameplay() {
     navigate("/gameplay", { state: { nameTeam: namaTeam, sessionCode: sessionCode } });
   }
 
-  const checkStatus = async () => {
-    try {
-      const res = await fetch(`/api/session-status/${sessionCode}`, { headers: { "Accept": "application/json" } });
-      const data = await res.json();
-      if (data.status === "ended") {
-        navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
-      }
-    } catch (error) {}
-  };
-
   async function fetchLeaderboard(isPolling = false) {
+    if (!sessionCode) return;
     try {
       const response = await fetch("/api/leaderboard", {
         method: "POST",
@@ -35,11 +38,20 @@ export default function Leaderboard() {
         body: JSON.stringify({ session_code: sessionCode }),
       });
       const data = await response.json();
-      if (data.status === "success") {
+
+      // Membaca status sesi yang sudah digabungkan di Backend Laravel
+      if (data.session_status === "ended") {
+        navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
+        return;
+      }
+
+      if (data.status === "success" || data.success) {
         setTeams((current) => {
           if (isPolling && current.length > 0) {
             prevTeamsRef.current = current;
-            sessionStorage.setItem(`lb_mhs_${sessionCode}`, JSON.stringify(current));
+            try {
+              sessionStorage.setItem(`lb_mhs_${sessionCode}`, JSON.stringify(current));
+            } catch (e) {}
           }
           return data.data;
         });
@@ -48,35 +60,33 @@ export default function Leaderboard() {
   }
 
   useEffect(() => {
-    if (!sessionCode || !namaTeam) return;
+    if (!sessionCode || !namaTeam) {
+      navigate('/');
+      return;
+    }
     
     let isMounted = true;
-    let statusTimeoutId;
     let leaderboardTimeoutId;
-
-    const pollStatus = async () => {
-      if (!isMounted) return;
-      await checkStatus();
-      if (isMounted) statusTimeoutId = setTimeout(pollStatus, 15000);
-    };
 
     const pollLeaderboard = async (isPolling) => {
       if (!isMounted) return;
-      await fetchLeaderboard(isPolling);
+      
+      if (!document.hidden) {
+         await fetchLeaderboard(isPolling);
+      }
+      
       if (isMounted) {
         leaderboardTimeoutId = setTimeout(() => pollLeaderboard(true), 30000);
       }
     };
 
-    pollStatus();
     pollLeaderboard(false);
 
     return () => {
       isMounted = false;
-      clearTimeout(statusTimeoutId);
       clearTimeout(leaderboardTimeoutId);
     };
-  }, [sessionCode, namaTeam]);
+  }, [sessionCode, namaTeam, navigate]);
 
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-32">

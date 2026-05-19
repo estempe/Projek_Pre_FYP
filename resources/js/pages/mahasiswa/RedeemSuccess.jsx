@@ -10,7 +10,7 @@ export default function RedeemSuccess() {
   const sessionCode = location.state?.sessionCode || "";
 
   const handleKembali = () => {
-    navigate("/result", { state: { sessionCode, nameTeam } });
+    navigate("/result", { state: { sessionCode, nameTeam, fromRedeem: true } });
   };
 
   const handleTutupSesi = () => {
