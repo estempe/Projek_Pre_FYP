@@ -10,6 +10,7 @@ export default function Leaderboard() {
   const location = useLocation();
   const namaTeam = location.state?.nameTeam;
   const sessionCode = location.state?.sessionCode;
+  const allowEndedLeaderboard = location.state?.allowEndedLeaderboard === true;
 
   const prevTeamsRef = useRef([]);
 
@@ -21,7 +22,7 @@ export default function Leaderboard() {
         if (stored) {
           prevTeamsRef.current = JSON.parse(stored);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
   }, [sessionCode]);
 
@@ -40,7 +41,7 @@ export default function Leaderboard() {
       const data = await response.json();
 
       // Membaca status sesi yang sudah digabungkan di Backend Laravel
-      if (data.session_status === "ended") {
+      if (data.session_status === "ended" && !allowEndedLeaderboard) {
         navigate("/result", { state: { sessionCode, nameTeam: namaTeam } });
         return;
       }
@@ -51,12 +52,12 @@ export default function Leaderboard() {
             prevTeamsRef.current = current;
             try {
               sessionStorage.setItem(`lb_mhs_${sessionCode}`, JSON.stringify(current));
-            } catch (e) {}
+            } catch (e) { }
           }
           return data.data;
         });
       }
-    } catch (error) {}
+    } catch (error) { }
   }
 
   useEffect(() => {
@@ -64,17 +65,17 @@ export default function Leaderboard() {
       navigate('/');
       return;
     }
-    
+
     let isMounted = true;
     let leaderboardTimeoutId;
 
     const pollLeaderboard = async (isPolling) => {
       if (!isMounted) return;
-      
+
       if (!document.hidden) {
-         await fetchLeaderboard(isPolling);
+        await fetchLeaderboard(isPolling);
       }
-      
+
       if (isMounted) {
         leaderboardTimeoutId = setTimeout(() => pollLeaderboard(true), 30000);
       }
@@ -86,7 +87,7 @@ export default function Leaderboard() {
       isMounted = false;
       clearTimeout(leaderboardTimeoutId);
     };
-  }, [sessionCode, namaTeam, navigate]);
+  }, [sessionCode, namaTeam, navigate, allowEndedLeaderboard]);
 
   return (
     <div className="min-h-screen bg-[#E8F1F8] flex justify-center font-sans pb-32">
@@ -100,7 +101,7 @@ export default function Leaderboard() {
             const currentRank = index + 1;
             const prevIndex = prevTeamsRef.current.findIndex(t => t.id === team.id);
             let trend = null;
-            
+
             if (prevIndex !== -1 && prevTeamsRef.current.length > 0) {
               const prevRank = prevIndex + 1;
               if (currentRank < prevRank) trend = 'up';
