@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\GameSession;
 use Illuminate\Support\Str;
 use App\Models\Post;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class GameSessionController extends Controller
@@ -194,16 +195,30 @@ class GameSessionController extends Controller
     public function finishPos(Request $request, $id)
     {
         $request->validate(['team_id' => 'required', 'post_id' => 'required', 'coins' => 'required|numeric']);
-        $team = \App\Models\Team::find($request->team_id);
-        $team->total_coins += $request->coins;
-        $team->save();
+        return DB::transaction(function () use ($request) {
+            $team = \App\Models\Team::where('id', $request->team_id)->lockForUpdate()->first();
+            if (!$team) return response()->json(['success' => false, 'message' => 'Tim tidak ditemukan'], 404);
 
-        $teamPost = \App\Models\TeamPost::firstOrNew(['team_id' => $request->team_id, 'post_id' => $request->post_id]);
-        $teamPost->status = 'completed';
-        $teamPost->earned_coins = $request->coins;
-        $teamPost->save();
+            $teamPost = \App\Models\TeamPost::where('team_id', $request->team_id)
+                ->where('post_id', $request->post_id)
+                ->lockForUpdate()
+                ->first();
 
-        return response()->json(['success' => true, 'message' => 'Nilai berhasil disimpan!']);
+            if (!$teamPost) return response()->json(['success' => false, 'message' => 'Data pos tim tidak ditemukan'], 404);
+
+            if ($teamPost->status === 'completed') {
+                return response()->json(['success' => true, 'message' => 'Pos sudah diselesaikan. Koin tidak ditambah.']);
+            }
+
+            $team->total_coins += $request->coins;
+            $team->save();
+
+            $teamPost->status = 'completed';
+            $teamPost->earned_coins = $request->coins;
+            $teamPost->save();
+
+            return response()->json(['success' => true, 'message' => 'Nilai berhasil disimpan!']);
+        });
     }
 
     public function getLeaderboard($id)
